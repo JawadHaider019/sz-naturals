@@ -2,8 +2,6 @@ import { Helmet } from 'react-helmet-async'
 import BestSeller from "../components/BestSeller"
 import Hero from "../components/Hero"
 import LatestCollection from "../components/LatestCollection"
-import NewsletterBox from "../components/NewsletterBox"
-import OurPolicy from "../components/OurPolicy"
 import Testimonial from '../components/Testimonial'
 import WhyChooseUs from "../components/WhyChooseUs"
 import DealCollection from "../components/DealCollection"
@@ -11,7 +9,7 @@ import DealCollection from "../components/DealCollection"
 const Home = () => {
   return (
     <div>
-      {/* ✅ PAKISTAN'S NO. 1 BRAND META TAGS */}
+
       <Helmet>
         <title>Pure Clay - Pakistan's No. 1 Organic Foods Brand | Natural Products</title>
         <meta 
@@ -27,8 +25,7 @@ const Home = () => {
       <BestSeller/>
       <WhyChooseUs/>
       <Testimonial/>
-      <OurPolicy/>
-      <NewsletterBox/>
+   
     </div>
   )
 }

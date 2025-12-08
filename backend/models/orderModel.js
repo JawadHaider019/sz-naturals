@@ -27,7 +27,7 @@ const orderSchema = new mongoose.Schema({
     },
     paymentAmount: {type: Number, required: true, default: 0},
     paymentScreenshot: {type: String, default: null},
-    paymentMethodDetail: {type: String, default: 'easypaisa'},
+    paymentMethodDetail: {type: String, default: 'COD'},
     
     // 🆕 PAYMENT VERIFICATION TRACKING
     verifiedBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null},

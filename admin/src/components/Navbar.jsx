@@ -61,7 +61,7 @@ const Navbar = () => {
         <img 
           src={adminLogo} 
           alt="Admin Logo" 
-          className={isMobile ? "w-20 h-20 object-contain" : "w-32 h-32 object-contain"}
+          className={isMobile ? "w-20 h-20 object-contain" : "w-20 h-20 object-contain"}
           onError={(e) => {
             console.error('❌ Failed to load admin logo from backend, using asset logo');
             // If backend logo fails to load, show asset logo instead
@@ -77,7 +77,7 @@ const Navbar = () => {
       <img
         src={assets.logo}
         alt="Logo"
-        className={isMobile ? "w-20 h-auto object-contain" : "w-32 h-auto object-contain"}
+        className={isMobile ? "w-20 h-auto object-contain" : "w-20 h-auto object-contain"}
       />
     );
   };
@@ -186,7 +186,7 @@ const Navbar = () => {
       {/* Desktop Navigation */}
       <div className="hidden md:block w-full bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between py-2">
             {/* Logo links to dashboard */}
             <div className="flex-shrink-0">
               <Link to="/" className="p-2 block">

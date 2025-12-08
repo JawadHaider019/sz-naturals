@@ -31,8 +31,8 @@ const LatestCollection = () => {
         index === self.findIndex(p => p._id === product._id)
       );
       
-      // MAX 4 PRODUCTS
-      const latestUniqueProducts = uniqueProducts.slice(0, 20);
+      // Get latest 4 products (or all if less than 4)
+      const latestUniqueProducts = uniqueProducts.slice(0, 4);
 
       return latestUniqueProducts;
 
@@ -71,25 +71,57 @@ const LatestCollection = () => {
     );
   };
 
-  // Calculate grid columns for non-slider view (when less than 4 products)
+  // Function to get the second image from product data
+  const getSecondImage = (product) => {
+    // Try multiple possible image data structures
+    if (product.image && Array.isArray(product.image) && product.image.length > 1) {
+      return product.image[1]; // Second image from array
+    } else if (product.images && Array.isArray(product.images) && product.images.length > 1) {
+      return product.images[1]; // Second image from 'images' array
+    } else if (product.secondaryImage) {
+      return product.secondaryImage; // Direct secondaryImage field
+    } else if (product.second_image) {
+      return product.second_image; // Alternative field name
+    }
+    
+    // If no second image is available, return null or the first image
+    return product.image && product.image.length > 0 ? product.image[0] : null;
+  };
+
+  // Function to get the primary image from product data
+  const getPrimaryImage = (product) => {
+    if (product.image && Array.isArray(product.image) && product.image.length > 0) {
+      return product.image[0];
+    } else if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      return product.images[0];
+    } else if (product.primaryImage) {
+      return product.primaryImage;
+    } else if (product.main_image) {
+      return product.main_image;
+    }
+    
+    return "/images/fallback-image.jpg";
+  };
+
+  // Calculate grid columns based on number of items
   const getGridColumns = () => {
     const count = latestProducts.length;
-    if (count === 1) return "grid-cols-1 max-w-md mx-auto";
+    if (count === 1) return "grid-cols-1 max-w-sm mx-auto";
     if (count === 2) return "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto";
     if (count === 3) return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto";
     if (count === 4) return "grid-cols-2 sm:grid-cols-2 md:grid-cols-4 max-w-6xl mx-auto";
-    return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+    return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 max-w-6xl mx-auto";
   };
 
-  // Enhanced Slick Slider settings for better mobile experience - SAME AS BEFORE
+  // Enhanced Slick Slider settings
   const sliderSettings = {
     dots: true, 
     infinite: latestProducts.length > 1,
     speed: 500,
     slidesToShow: Math.min(4, latestProducts.length),
     slidesToScroll: 1,
-    autoplay: latestProducts.length > Math.min(4, latestProducts.length),
-    autoplaySpeed: 3000,
+    autoplay: latestProducts.length > 1,
+    autoplaySpeed: 4000,
     pauseOnHover: true,
     swipe: true,
     swipeToSlide: true,
@@ -100,21 +132,21 @@ const LatestCollection = () => {
       {
         breakpoint: 1280, // Desktop
         settings: {
-          slidesToShow: Math.min(3, latestProducts.length),
+          slidesToShow: Math.min(4, latestProducts.length),
           slidesToScroll: 1,
-          infinite: latestProducts.length > 3,
-          autoplay: latestProducts.length > 3,
-          dots: true // Ensure dots are enabled
+          infinite: latestProducts.length > 1,
+          autoplay: latestProducts.length > 1,
+          dots: true
         }
       },
       {
-        breakpoint: 1024, // Small desktop/Tablet landscape
+        breakpoint: 1024, // Laptop
         settings: {
           slidesToShow: Math.min(3, latestProducts.length),
           slidesToScroll: 1,
-          infinite: latestProducts.length > 3,
-          autoplay: latestProducts.length > 3,
-          dots: true // Ensure dots are enabled
+          infinite: latestProducts.length > 1,
+          autoplay: latestProducts.length > 1,
+          dots: true
         }
       },
       {
@@ -122,9 +154,9 @@ const LatestCollection = () => {
         settings: {
           slidesToShow: Math.min(2, latestProducts.length),
           slidesToScroll: 1,
-          infinite: latestProducts.length > 2,
-          autoplay: latestProducts.length > 2,
-          dots: true // Ensure dots are enabled
+          infinite: latestProducts.length > 1,
+          autoplay: latestProducts.length > 1,
+          dots: true
         }
       },
       {
@@ -134,23 +166,8 @@ const LatestCollection = () => {
           slidesToScroll: 1,
           infinite: latestProducts.length > 1,
           autoplay: latestProducts.length > 1,
-          dots: true, // Ensure dots are enabled
+          dots: true,
           arrows: false,
-          swipe: true,
-          touchMove: true,
-          adaptiveHeight: true
-        }
-      },
-      {
-        breakpoint: 480, // Small mobile
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-          infinite: latestProducts.length > 1,
-          autoplay: latestProducts.length > 1,
-          dots: true, // Ensure dots are enabled
-          arrows: false,
-          centerMode: false,
           swipe: true,
           touchMove: true,
           adaptiveHeight: true
@@ -158,7 +175,7 @@ const LatestCollection = () => {
       }
     ],
     appendDots: dots => (
-      <div className="mt-8 md:mt-10"> {/* Increased margin top */}
+      <div className="mt-8 md:mt-10">
         <ul style={{ 
           display: 'flex', 
           justifyContent: 'center', 
@@ -199,7 +216,7 @@ const LatestCollection = () => {
     )
   };
 
-  // Add inline styles to override slick dots - SAME AS BEFORE
+  // Add inline styles to override slick dots
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -233,51 +250,67 @@ const LatestCollection = () => {
     };
   }, []);
 
-  // NEW: Always show slider when we have multiple products - SAME LOGIC
-  const shouldShowSlider = () => {
-    // Always show slider if we have more than 1 product
-    // This ensures dots are visible on all devices
-    return latestProducts.length > 1;
-  };
+  // Check if we should show slider based on screen size and item count
+  const [shouldUseSlider, setShouldUseSlider] = useState(false);
 
-  const [showSlider, setShowSlider] = useState(false);
-
-  // Update slider visibility on mount and resize - SAME LOGIC
   useEffect(() => {
-    const updateSliderVisibility = () => {
-      setShowSlider(shouldShowSlider());
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      const itemCount = latestProducts.length;
+      
+      if (itemCount <= 1) {
+        setShouldUseSlider(false);
+        return;
+      }
+      
+      // Mobile (< 640px): Show slider if more than 1 item
+      if (width < 640 && itemCount > 1) {
+        setShouldUseSlider(true);
+      }
+      // Tablet (640px - 1023px): Show slider if more than 2 items
+      else if (width >= 640 && width < 1024 && itemCount > 2) {
+        setShouldUseSlider(true);
+      }
+      // Laptop/Desktop (≥ 1024px): Show slider if more than 4 items
+      else if (width >= 1024 && itemCount > 4) {
+        setShouldUseSlider(true);
+      }
+      else {
+        setShouldUseSlider(false);
+      }
     };
 
-    updateSliderVisibility();
-    window.addEventListener('resize', updateSliderVisibility);
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
     
     return () => {
-      window.removeEventListener('resize', updateSliderVisibility);
+      window.removeEventListener('resize', checkScreenSize);
     };
   }, [latestProducts.length]);
 
-  if (loading) {
+ if (loading) {
     return (
-      <div className="my-16 md:my-24">
-        <div className="py-2 text-center text-2xl md:text-3xl">
-          <Title text1={'New'} text2={'Arrivals'} />
+      <div className="rounded-3xl bg-gradient-to-br from-gray-50 to-gray-100 p-6 md:p-8 my-16 md:my-24">
+        <div className="text-center mb-8">
+          <Title text1={"Recently "} text2={"Added"} />
+          <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
+            Discover Pure Clay's best-selling organic collection, made in Pakistan with care.
+          </p>
         </div>
         <div className="text-center text-gray-500 py-8">
-          Loading latest collections...
+          Loading best sellers...
         </div>
       </div>
     );
   }
 
-  if (error) {
+ if (error) {
     return (
-      <div className="my-16 md:my-24">
-        <div className="flex justify-between flex-col md:flex-row md:items-start gap-3 md:gap-20 py-2 mx-4 md:mx-10 text-center md:text-left mb-5">
-          <div className="flex-shrink-0">
-            <Title text1={'New'} text2={'Arrivals'} />
-          </div>
-          <p className="w-full md:max-w-[60%] text-gray-800 font-normal leading-relaxed text-base text-lg  flex-1">
-            Discover Pure Clay's newest range of organic products, proudly made in Pakistan. Each item is crafted with care, delivering natural, wholesome, and sustainable options for a healthier life.
+      <div className="rounded-3xl bg-gray-50 px-6 md:px-8 py-16 md:py-24">
+        <div className="text-center mb-8">
+          <Title text1={"Recently "} text2={"Added"} />
+          <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
+            Explore our latest additions to the herbal collection - designed for visible hair transformation.
           </p>
         </div>
         <div className="text-center text-red-500 py-8">
@@ -286,45 +319,50 @@ const LatestCollection = () => {
       </div>
     );
   }
+  // Don't render anything if no products
+  if (latestProducts.length === 0) {
+    return null;
+  }
 
   return (
     <div className="my-16 md:my-24">
-      <div className="flex justify-between flex-col md:flex-row md:items-start gap-3 md:gap-20 py-2 mx-4 md:mx-10 text-center md:text-left mb-5">
-        <div className="flex-shrink-0">
-          <Title text1={'New'} text2={'Arrivals'} />
+      <div className="text-center mb-8 md:mb-12">
+        <div className="mb-4">
+          <Title text1={'Recently '} text2={'Added'} />
         </div>
-        <p className="w-full md:max-w-[50%] text-gray-800 font-normal leading-relaxed text-base text-lg  flex-1">
-          Discover Pure Clay's newest range of organic products, proudly made in Pakistan. Each item is crafted with care, delivering natural, wholesome, and sustainable options for a healthier life.
+        <p className="text-gray-600 mt-4 max-w-2xl mx-auto text-base md:text-lg">
+          Explore our latest additions to the herbal collection - designed for visible hair transformation.
         </p>
       </div>
-      
-      {latestProducts.length === 0 ? (
-        <div className="text-center text-gray-500 py-8 px-4">
-          No products available at the moment.
-        </div>
-      ) : showSlider ? (
-        // Show slider when we have more products than can be shown on screen - SAME SLIDER
+      {shouldUseSlider ? (
+        // Show slider based on screen size logic
         <div className="relative px-1 sm:px-2">
           <Slider ref={sliderRef} {...sliderSettings}>
-            {latestProducts.map((item) => (
-              <div key={item._id} className="px-0.5">
-                <div className="mx-0">
-                  <ProductItem
-                    id={item._id}
-                    image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
-                    name={item.name}
-                    price={item.price}
-                    discount={item.discountprice}
-                    rating={item.rating || 0}
-                    status={item.status}
-                  />
+            {latestProducts.map((item) => {
+              const primaryImage = getPrimaryImage(item);
+              const secondImage = getSecondImage(item);
+              
+              return (
+                <div key={item._id} className="px-0.5">
+                  <div className="mx-0">
+                    <ProductItem
+                      id={item._id}
+                      image={primaryImage}
+                      secondImage={secondImage !== primaryImage ? secondImage : null}
+                      name={item.name}
+                      price={item.price}
+                      discount={item.discountprice}
+                      rating={item.rating || 0}
+                      status={item.status}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </Slider>
           
-          {/* Add custom arrows outside the slider - hidden on mobile - SAME LOGIC */}
-          {latestProducts.length > Math.min(3, latestProducts.length) && (
+          {/* Add custom arrows outside the slider - hidden on mobile */}
+          {latestProducts.length > 1 && (
             <>
               <PrevArrow onClick={() => sliderRef.current?.slickPrev()} />
               <NextArrow onClick={() => sliderRef.current?.slickNext()} />
@@ -332,20 +370,26 @@ const LatestCollection = () => {
           )}
         </div>
       ) : (
-        // Show regular grid only when we have exactly 1 product - SAME GRID
-        <div className={`grid ${getGridColumns()} gap-2 sm:gap-3 gap-y-6 px-1 sm:px-2`}>
-          {latestProducts.map((item) => (
-            <ProductItem
-              key={item._id}
-              id={item._id}
-              image={item.image && item.image.length > 0 ? item.image[0] : "/images/fallback-image.jpg"}
-              name={item.name}
-              price={item.price}
-              discount={item.discountprice}
-              rating={item.rating || 0}
-              status={item.status}
-            />
-          ))}
+        // Show regular grid when slider is not needed
+        <div className={`grid ${getGridColumns()} gap-4 md:gap-6 px-4 sm:px-6`}>
+          {latestProducts.map((item) => {
+            const primaryImage = getPrimaryImage(item);
+            const secondImage = getSecondImage(item);
+            
+            return (
+              <ProductItem
+                key={item._id}
+                id={item._id}
+                image={primaryImage}
+                secondImage={secondImage !== primaryImage ? secondImage : null}
+                name={item.name}
+                price={item.price}
+                discount={item.discountprice}
+                rating={item.rating || 0}
+                status={item.status}
+              />
+            );
+          })}
         </div>
       )}
     </div>

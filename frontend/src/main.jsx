@@ -6,7 +6,7 @@ import ShopContextProvider from './context/ShopContext.jsx'
 import { HelmetProvider } from 'react-helmet-async' // ✅ ADD THIS IMPORT
 
 createRoot(document.getElementById('root')).render(
-  <HelmetProvider> {/* ✅ WRAP EVERYTHING WITH HELMET PROVIDER */}
+  <HelmetProvider> 
     <ShopContextProvider>
       <BrowserRouter>
         <App />

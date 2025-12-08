@@ -1,5 +1,4 @@
-import React from 'react';
-import { useState, useContext, useEffect, useCallback } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import Title from '../components/Title';
 import CartTotal from '../components/CartTotal';
 import { ShopContext } from '../context/ShopContext';
@@ -7,27 +6,50 @@ import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { assets } from "../assets/assets";
+import LoginModal from '../components/Login';
+import { 
+  FaLock, 
+  FaCreditCard, 
+  FaMoneyBillWave, 
+  FaUpload, 
+  FaTimes,
+  FaCheck,
+  FaMapMarkerAlt,
+  FaUser,
+  FaEnvelope,
+  FaPhone,
+  FaHome,
+  FaCity,
+  FaGlobeAsia,
+  FaReceipt,
+  FaShoppingBag,
+  FaChevronDown,
+  FaArrowRight,
+  FaCheckCircle,
+  FaInfoCircle,
+  FaSpinner
+} from 'react-icons/fa';
 
 const PlaceOrder = () => {
   const [loading, setLoading] = useState(false);
-  const [isDataReady, setIsDataReady] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [hasUserDataLoaded, setHasUserDataLoaded] = useState(false);
-  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
-  const [addressSuggestions, setAddressSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [cities, setCities] = useState([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [pakistanStates, setPakistanStates] = useState([]);
-  const [isValidatingAddress, setIsValidatingAddress] = useState(false);
   const [cityZipData, setCityZipData] = useState({});
-  const [knownCitiesWithZips, setKnownCitiesWithZips] = useState({});
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   
   // Payment States
   const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
   const [paymentScreenshot, setPaymentScreenshot] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [isUploadingPayment, setIsUploadingPayment] = useState(false);
+  
+  // Login Modal State
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
   
   const {
     backendUrl,
@@ -35,8 +57,6 @@ const PlaceOrder = () => {
     user,
     cartItems,
     cartDeals,
-    setCartItems,
-    setCartDeals,
     getDeliveryCharge,
     getCartAmount,
     products,
@@ -61,7 +81,25 @@ const PlaceOrder = () => {
     };
   });
 
-  // Get total amount using the same logic as CartTotal
+  // Payment methods
+  const paymentMethods = [
+    {
+      id: 'COD',
+      name: 'Cash on Delivery',
+      description: 'Pay when your order is delivered',
+      icon: <FaMoneyBillWave className="w-5 h-5" />,
+      color: 'text-black'
+    },
+    {
+      id: 'online',
+      name: 'Online Payment',
+      description: 'Pay now via EasyPaisa/JazzCash',
+      icon: <FaCreditCard className="w-5 h-5" />,
+      color: 'text-black'
+    }
+  ];
+
+  // Calculate total amount
   const calculateTotalAmount = () => {
     try {
       const subtotal = getCartAmount?.() || 0;
@@ -74,21 +112,15 @@ const PlaceOrder = () => {
 
   const totalAmount = calculateTotalAmount();
 
-  // Enhanced authentication and cart check
+  // Check authentication status - WITHOUT auto-opening modal on reload
   useEffect(() => {
-    if (!token || !user) {
-      sessionStorage.setItem('redirectAfterLogin', '/place-order');
-      navigate('/login');
-      return;
-    }
+    // Wait a bit to ensure auth context is loaded
+    const timer = setTimeout(() => {
+      setIsCheckingAuth(false);
+    }, 500);
 
-    const cartItemCount = (cartItems ? Object.keys(cartItems).length : 0) + 
-                         (cartDeals ? Object.keys(cartDeals).length : 0);
-    
-    if (cartItemCount === 0) {
-      // Cart is empty, will show empty state
-    }
-  }, [token, user, cartItems, cartDeals, navigate]);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load user data as defaults
   useEffect(() => {
@@ -126,7 +158,6 @@ const PlaceOrder = () => {
     if (!stateName) {
       setCities([]);
       setCityZipData({});
-      setKnownCitiesWithZips({});
       return;
     }
 
@@ -143,22 +174,15 @@ const PlaceOrder = () => {
           const cityNames = citiesData.map(city => city.name).sort();
           setCities(cityNames);
           
-          // Create city-zip mapping
           const zipMapping = {};
-          const knownCities = {};
           
           citiesData.forEach(city => {
             if (city.name && city.zipCode && city.zipCode !== 'N/A') {
               zipMapping[city.name] = city.zipCode;
-              knownCities[city.name] = {
-                zipCode: city.zipCode,
-                state: stateName
-              };
             }
           });
           
           setCityZipData(zipMapping);
-          setKnownCitiesWithZips(knownCities);
         }
       }
     } catch (error) {
@@ -182,35 +206,6 @@ const PlaceOrder = () => {
     }
   }, [cityZipData, formData.zipcode, validationErrors.zipcode]);
 
-  // Validate address - UPDATED to always return valid
-  const validateAddress = useCallback(async (city, state, zipcode) => {
-    if (!city || !state) return { isValid: false, message: 'City and state are required' };
-
-    try {
-      const response = await axios.post(`${backendUrl}/api/locations/validate-city-zip`, {
-        city, state, zipCode: zipcode, country: 'Pakistan'
-      });
-
-      if (response.data.success) {
-        return response.data.data;
-      } else {
-        // Even if validation fails, allow with manual verification
-        return { 
-          isValid: true, 
-          message: 'Address accepted with manual verification',
-          requiresManualVerification: true
-        };
-      }
-    } catch (error) {
-      // If API fails, always allow
-      return { 
-        isValid: true, 
-        message: 'Address accepted (validation service unavailable)',
-        requiresManualVerification: true
-      };
-    }
-  }, [backendUrl]);
-
   // Update cities when state changes
   useEffect(() => {
     if (formData.state) {
@@ -218,7 +213,6 @@ const PlaceOrder = () => {
     } else {
       setCities([]);
       setCityZipData({});
-      setKnownCitiesWithZips({});
     }
   }, [formData.state, fetchCitiesByState]);
 
@@ -229,73 +223,12 @@ const PlaceOrder = () => {
     }
   }, [formData.city, formData.zipcode, cityZipData, autoFillZipCode]);
 
-  // SIMPLIFIED ZIP code validation - only check for 5 digits, no blocking
-  const validateZipCode = useCallback((zipcode) => {
-    if (!zipcode) return 'ZIP code is required';
-    if (!/^\d{5}$/.test(zipcode)) return 'ZIP code must be 5 digits';
-    return true;
-  }, []);
-
   // Save form data to localStorage
   useEffect(() => {
     localStorage.setItem('orderFormData', JSON.stringify(formData));
   }, [formData]);
 
-  // Enhanced data readiness check - FIXED SYNTAX ERROR
-  useEffect(() => {
-    const hasCartItems = (cartItems && Object.keys(cartItems).length > 0) || 
-                        (cartDeals && Object.keys(cartDeals).length > 0);
-    
-    const hasProductsData = products !== undefined && products !== null;
-    const hasDealsData = deals !== undefined && deals !== null;
-    
-    const ready = hasProductsData && hasDealsData;
-
-    setIsDataReady(ready);
-  }, [cartItems, cartDeals, products, deals]);
-
-  // Address suggestions
-  const fetchAddressSuggestions = useCallback(async (query) => {
-    if (!query || query.length < 3) {
-      setAddressSuggestions([]);
-      setIsSearchingAddress(false);
-      return;
-    }
-
-    setIsSearchingAddress(true);
-    try {
-      const GEOAPIFY_API_KEY = '2d3f1042c3f94233a2e3347a80ad8c27';
-      const response = await axios.get(
-        `https://api.geoapify.com/v1/geocode/autocomplete`,
-        {
-          params: {
-            text: `${query}, Pakistan`,
-            filter: `countrycode:pk`,
-            format: 'json',
-            apiKey: GEOAPIFY_API_KEY,
-            limit: 5
-          }
-        }
-      );
-
-      const suggestions = (response.data?.results || []).map(item => ({
-        fullAddress: item.formatted || '',
-        street: item.street || item.address_line1 || '',
-        city: item.city || item.municipality || '',
-        state: item.state || item.region || '',
-        zipcode: item.postcode || '',
-        country: item.country || ''
-      })).filter(suggestion => suggestion.fullAddress);
-
-      setAddressSuggestions(suggestions);
-    } catch (error) {
-      setAddressSuggestions([]);
-    } finally {
-      setIsSearchingAddress(false);
-    }
-  }, []);
-
-  // Field validation - UPDATED to remove blocking ZIP validation
+  // Field validation
   const validateField = async (name, value) => {
     const errors = {};
     
@@ -326,7 +259,6 @@ const PlaceOrder = () => {
         break;
         
       case 'zipcode':
-        // SIMPLIFIED: Only check for 5 digits, but don't block submission
         if (!value.trim()) errors.zipcode = 'ZIP code is required';
         else if (!/^\d{5}$/.test(value.trim())) errors.zipcode = 'ZIP code must be 5 digits';
         break;
@@ -343,38 +275,32 @@ const PlaceOrder = () => {
   const validateForm = async () => {
     const errors = {};
     
-    // Validate all form fields except ZIP code validation won't block submission
+    // Validate all form fields
     for (const field of Object.keys(formData)) {
       const fieldErrors = await validateField(field, formData[field]);
       Object.assign(errors, fieldErrors);
     }
     
-    // Validate payment screenshot
-    if (!paymentScreenshot) {
-      errors.payment = 'Please upload payment screenshot to place order';
+    // Validate payment screenshot for online payments only
+    if (paymentMethod === 'online' && !paymentScreenshot) {
+      errors.payment = 'Please upload payment screenshot';
     }
     
     setValidationErrors(errors);
     
-    // Allow submission even if there are ZIP code errors (they're just warnings now)
-    const blockingErrors = { ...errors };
-    delete blockingErrors.zipcode; // Remove ZIP code errors from blocking validation
-    
-    return Object.keys(blockingErrors).length === 0;
+    return Object.keys(errors).length === 0;
   };
 
   // Handle payment screenshot upload
   const handlePaymentScreenshot = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!validTypes.includes(file.type)) {
         toast.error('Please upload a valid image file (JPG, PNG, WebP)');
         return;
       }
       
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('File size should be less than 5MB');
         return;
@@ -382,14 +308,12 @@ const PlaceOrder = () => {
       
       setPaymentScreenshot(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviewImage(e.target.result);
       };
       reader.readAsDataURL(file);
       
-      // Clear any previous payment errors
       if (validationErrors.payment) {
         setValidationErrors(prev => ({ ...prev, payment: '' }));
       }
@@ -405,17 +329,14 @@ const PlaceOrder = () => {
   const onChangeHandler = async (e) => {
     const { name, value } = e.target;
     
-    // Format phone number
     let formattedValue = value;
     if (name === 'phone') {
       const digits = value.replace(/\D/g, '').slice(0, 11);
       formattedValue = digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4, 11)}` : digits;
     }
     
-    // Don't allow numbers in name fields
     if ((name === 'fullName' || name === 'city') && /\d/.test(value)) return;
     
-    // Clear city and zipcode when state changes
     if (name === 'state' && value !== formData.state) {
       setFormData(prev => ({ 
         ...prev, 
@@ -423,35 +344,14 @@ const PlaceOrder = () => {
         city: '',
         zipcode: ''
       }));
-      setKnownCitiesWithZips({});
     } else {
       setFormData(prev => ({ ...prev, [name]: formattedValue || value }));
     }
     
-    // Auto-fill ZIP code only for known cities
     if (name === 'city' && value && cityZipData[value] && !formData.zipcode) {
       setTimeout(() => autoFillZipCode(value), 100);
     }
     
-    // Address suggestions
-    if (name === 'street') {
-      if (value.length >= 3) {
-        setShowSuggestions(true);
-        fetchAddressSuggestions(value);
-      } else {
-        setAddressSuggestions([]);
-      }
-    }
-    
-    // Real-time ZIP validation - SIMPLIFIED
-    if (name === 'zipcode' && value.length === 5 && /^\d{5}$/.test(value)) {
-      setValidationErrors(prev => ({
-        ...prev,
-        zipcode: ''
-      }));
-    }
-    
-    // Clear validation error
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -461,29 +361,6 @@ const PlaceOrder = () => {
     const { name, value } = e.target;
     const errors = await validateField(name, value);
     setValidationErrors(prev => ({ ...prev, ...errors }));
-  };
-
-  const selectAddressSuggestion = (suggestion) => {
-    setFormData(prev => ({
-      ...prev,
-      street: suggestion.street || prev.street,
-      city: suggestion.city || prev.city,
-      state: suggestion.state || prev.state,
-      zipcode: suggestion.zipcode || prev.zipcode
-    }));
-    setAddressSuggestions([]);
-    setShowSuggestions(false);
-  };
-
-  // Cart processing
-  const getDealProducts = (deal) => {
-    if (deal.dealProducts?.length > 0) {
-      return deal.dealProducts.map(product => {
-        const productData = products.find(p => p._id === product._id) || product;
-        return { ...productData, quantity: product.quantity || 1 };
-      });
-    }
-    return [];
   };
 
   // Process cart items for order
@@ -519,7 +396,7 @@ const PlaceOrder = () => {
       });
     }
 
-    // Process deals using the same structure as cart
+    // Process deals
     if (cartDeals && deals) {
       Object.entries(cartDeals).forEach(([dealId, dealQuantity]) => {
         if (dealQuantity > 0) {
@@ -527,8 +404,6 @@ const PlaceOrder = () => {
           if (dealInfo?.dealName) {
             const unitPrice = dealInfo.dealFinalPrice || dealInfo.price;
             const itemTotalPrice = unitPrice * dealQuantity;
-            const originalTotalPrice = dealInfo.dealTotal;
-            const savings = originalTotalPrice ? (originalTotalPrice - unitPrice) : 0;
             
             orderItems.push({
               id: dealInfo._id,
@@ -539,9 +414,6 @@ const PlaceOrder = () => {
               category: 'Deal',
               isFromDeal: true,
               description: dealInfo.dealDescription,
-              originalTotalPrice: dealInfo.dealTotal,
-              savings: savings,
-              dealProducts: getDealProducts(dealInfo),
               type: 'deal'
             });
             
@@ -557,36 +429,22 @@ const PlaceOrder = () => {
   const onSubmitHandler = async (e) => {
     e.preventDefault();
     
+    // Check if user is logged in
+    if (!token || !user) {
+      setIsLoginModalOpen(true);
+      setAuthMode('login');
+      toast.info('Please login to place your order');
+      return;
+    }
+    
     if (!await validateForm()) {
       toast.error('Please fix the validation errors before submitting');
-      return;
-    }
-    
-    if (!token || !user) {
-      sessionStorage.setItem('redirectAfterLogin', '/place-order');
-      navigate('/login');
-      return;
-    }
-    
-    if (!isDataReady) {
-      toast.error('Cart data is still loading. Please wait...');
       return;
     }
 
     setLoading(true);
     
     try {
-      // Validate address but don't block on failure
-      setIsValidatingAddress(true);
-      const addressValidation = await validateAddress(formData.city, formData.state, formData.zipcode);
-      
-      // Show warning but don't block submission
-      if (!addressValidation.isValid) {
-        toast.warning('Address may need manual verification: ' + addressValidation.message);
-      } else if (addressValidation.requiresManualVerification) {
-        toast.warning('Your address will be manually verified for delivery');
-      }
-
       const { orderItems, calculatedAmount } = processCartItems();
       const deliveryCharge = getDeliveryCharge(calculatedAmount);
       const finalAmount = calculatedAmount + deliveryCharge;
@@ -597,7 +455,7 @@ const PlaceOrder = () => {
         return;
       }
 
-      // Prepare order data according to backend schema
+      // Prepare order data
       const orderData = {
         items: orderItems,
         amount: finalAmount,
@@ -609,12 +467,12 @@ const PlaceOrder = () => {
           phone: formData.phone
         },
         paymentMethod: paymentMethod,
-        paymentStatus: 'pending',
-        paymentAmount: paymentMethod === 'COD' ? 350 : finalAmount
+        paymentStatus: paymentMethod === 'online' ? 'pending' : 'pending',
+        paymentAmount: finalAmount
       };
 
-      // Upload payment screenshot with order data
-      if (paymentScreenshot) {
+      // Upload payment screenshot for online payments
+      if (paymentMethod === 'online' && paymentScreenshot) {
         setIsUploadingPayment(true);
         const paymentFormData = new FormData();
         paymentFormData.append('payment_screenshot', paymentScreenshot);
@@ -632,8 +490,8 @@ const PlaceOrder = () => {
         );
         
         if (paymentResponse.data.success) {
-          // Clear cart using ShopContext function
           clearCart();
+          localStorage.removeItem('orderFormData');
           
           toast.success(paymentResponse.data.message || 'Order placed successfully!');
           navigate('/orders');
@@ -641,14 +499,32 @@ const PlaceOrder = () => {
           toast.error(paymentResponse.data.message || 'Failed to place order with payment');
         }
         setIsUploadingPayment(false);
-        setLoading(false);
-        return;
+      } else if (paymentMethod === 'COD') {
+        // For COD, submit without payment screenshot
+        const response = await axios.post(
+          `${backendUrl}/api/order/place-order`,
+          orderData,
+          {
+            headers: { token }
+          }
+        );
+        
+        if (response.data.success) {
+          clearCart();
+          localStorage.removeItem('orderFormData');
+          
+          toast.success(response.data.message || 'Order placed successfully!');
+          navigate('/orders');
+        } else {
+          toast.error(response.data.message || 'Failed to place order');
+        }
       }
 
     } catch (error) {
       if (error.response?.status === 401) {
-        sessionStorage.setItem('redirectAfterLogin', '/place-order');
-        navigate('/login');
+        setIsLoginModalOpen(true);
+        setAuthMode('login');
+        toast.error('Your session has expired. Please login again.');
       } else if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else {
@@ -656,7 +532,6 @@ const PlaceOrder = () => {
       }
     } finally {
       setLoading(false);
-      setIsValidatingAddress(false);
     }
   };
 
@@ -664,40 +539,135 @@ const PlaceOrder = () => {
   const cartItemCount = (cartItems ? Object.keys(cartItems).length : 0) + 
                        (cartDeals ? Object.keys(cartDeals).length : 0);
 
-  if (!token || !user) {
+  // Get selected payment method
+  const selectedPaymentMethod = paymentMethods.find(p => p.id === paymentMethod);
+
+  // Show loading state while checking auth
+  if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="text-gray-600">Redirecting to login...</div>
+          <div className="w-16 h-16 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <p className="text-gray-600 text-lg">Loading checkout...</p>
         </div>
       </div>
     );
   }
 
+  // If user is not logged in, show the page with a login prompt (not modal)
+  if (!token || !user) {
+    return (
+      <>
+        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12">
+          <div className="max-w-7xl mx-auto px-4">
+            {/* Header */}
+            <div className="mb-12 text-center">
+              <div className="inline-block mb-4">
+                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
+                  Checkout
+                </span>
+              </div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">Complete Your Order</h1>
+              <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                Review your information and choose your preferred payment method
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column - Login Prompt */}
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
+                  <div className="p-3 bg-black/5 rounded-lg">
+                    <FaLock className="w-6 h-6 text-black" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Sign In Required</h2>
+                    <p className="text-gray-600 text-sm mt-1">Please login to continue with your order</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="text-center py-8">
+                    <div className="w-24 h-24 bg-black/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <FaLock className="w-12 h-12 text-black" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Login to Checkout</h3>
+                    <p className="text-gray-600 mb-8">
+                      Sign in to your account to complete your order and view order history
+                    </p>
+                    <button 
+                      onClick={() => setIsLoginModalOpen(true)}
+                      className="group bg-black text-white px-8 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all duration-300 w-full flex items-center justify-center gap-3"
+                    >
+                      <span>Sign In to Continue</span>
+                      <FaArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Order Summary Preview */}
+              <div className="lg:sticky lg:top-8 lg:h-fit">
+                <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
+                    <div className="p-3 bg-black/5 rounded-lg">
+                      <FaReceipt className="w-6 h-6 text-black" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Order Preview</h2>
+                      <p className="text-gray-600 text-sm mt-1">Your cart summary</p>
+                    </div>
+                  </div>
+                  
+                  <CartTotal />
+                  
+                  <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-xl">
+                    <p className="text-gray-600 text-sm text-center">
+                      Sign in to proceed with payment and delivery information
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Login Modal - only opens when user clicks login button */}
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          initialMode={authMode}
+        />
+      </>
+    );
+  }
+
   if (cartItemCount === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center px-4">
         <div className="text-center max-w-md w-full">
-          <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-2xl text-gray-600">🛒</span>
+          <div className="w-24 h-24 bg-black/5 rounded-full flex items-center justify-center mx-auto mb-8">
+            <FaShoppingBag className="w-12 h-12 text-black" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
-          <p className="text-gray-600 mb-8">Add some products to your cart before placing an order.</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Your Cart is Empty</h2>
+          <p className="text-gray-600 mb-8 text-lg">Add some herbal products to your cart first</p>
           <button 
-            onClick={() => navigate('/')}
-            className="bg-black text-white px-8 py-3 rounded-3xl font-medium hover:bg-gray-800 transition-colors w-full"
+            onClick={() => navigate('/collection')}
+            className="group bg-black text-white px-8 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all duration-300 w-full flex items-center justify-center gap-3"
           >
-            Continue Shopping
+            <span>Browse Products</span>
+            <FaArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>
     );
   }
 
-  // Render methods with clean, simple styling
-  const renderInputField = (name, type = 'text', placeholder, label, required = true) => (
+  // Render Input Field
+  const renderInputField = (name, type = 'text', placeholder, label, required = true, icon) => (
     <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="flex items-center text-sm font-semibold text-gray-800 mb-3 tracking-wide">
+        {icon && <span className="mr-3 opacity-70">{icon}</span>}
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <input 
@@ -705,26 +675,25 @@ const PlaceOrder = () => {
         onBlur={onBlurHandler}
         name={name} 
         value={formData[name]} 
-        className={`w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
-          validationErrors[name] 
-            ? 'border-red-500 bg-red-50' 
-            : 'bg-white hover:border-gray-400'
-        }`} 
+        className={`w-full px-5 py-4 border-2 ${validationErrors[name] ? 'border-red-300 bg-red-50/50' : 'border-gray-200 bg-white/80'} rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition-all duration-300 text-gray-800 placeholder-gray-400`} 
         type={type}
         placeholder={placeholder}
         required={required}
       />
       {validationErrors[name] && (
-        <p className="text-red-600 text-sm mt-2">
+        <p className="text-red-600 text-sm mt-3 flex items-center gap-2">
+          <FaInfoCircle className="w-4 h-4" />
           {validationErrors[name]}
         </p>
       )}
     </div>
   );
 
-  const renderSelectField = (name, options, placeholder, label, required = true) => (
+  // Render Select Field
+  const renderSelectField = (name, options, placeholder, label, required = true, icon) => (
     <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="flex items-center text-sm font-semibold text-gray-800 mb-3 tracking-wide">
+        {icon && <span className="mr-3 opacity-70">{icon}</span>}
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <select
@@ -732,247 +701,142 @@ const PlaceOrder = () => {
         onBlur={onBlurHandler}
         name={name}
         value={formData[name]}
-        className={`w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
-          validationErrors[name] 
-            ? 'border-red-500 bg-red-50' 
-            : 'bg-white hover:border-gray-400'
-        }`}
+        className={`w-full px-5 py-4 border-2 ${validationErrors[name] ? 'border-red-300 bg-red-50/50' : 'border-gray-200 bg-white/80'} rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black transition-all duration-300 text-gray-800 appearance-none cursor-pointer`}
         required={required}
       >
-        <option value="">{placeholder}</option>
+        <option value="" className="text-gray-400">{placeholder}</option>
         {options.map(option => (
-          <option key={option} value={option}>{option}</option>
+          <option key={option} value={option} className="text-gray-800">{option}</option>
         ))}
       </select>
       {validationErrors[name] && (
-        <p className="text-red-600 text-sm mt-2">
+        <p className="text-red-600 text-sm mt-3 flex items-center gap-2">
+          <FaInfoCircle className="w-4 h-4" />
           {validationErrors[name]}
         </p>
       )}
     </div>
   );
 
-  const renderCityInput = () => (
-    <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        City <span className="text-red-500">*</span>
-      </label>
-      <div className="relative">
-        <input
-          onChange={onChangeHandler}
-          onBlur={onBlurHandler}
-          name="city"
-          value={formData.city}
-          list="city-suggestions"
-          className={`w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
-            validationErrors.city 
-              ? 'border-red-500 bg-red-50' 
-              : 'bg-white hover:border-gray-400'
-          } ${!formData.state ? 'opacity-50 cursor-not-allowed' : ''}`}
-          type="text"
-          placeholder={formData.state ? "Select from list or type your city" : "Select province first"}
-          required
-          disabled={!formData.state}
-        />
-        
-        {isLoadingCities && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
-          </div>
-        )}
+  // Render Payment Dropdown
+  const renderPaymentDropdown = () => (
+    <div className="mt-8">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Method</h2>
+        <p className="text-gray-600">Select your preferred payment option</p>
       </div>
       
-      <datalist id="city-suggestions">
-        {cities.map(city => (
-          <option key={city} value={city} />
-        ))}
-      </datalist>
-      
-      {validationErrors.city && (
-        <p className="text-red-600 text-sm mt-2">
-          {validationErrors.city}
-        </p>
-      )}
-    </div>
-  );
-
-  const renderZipCodeInput = () => (
-    <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        ZIP Code <span className="text-red-500">*</span>
-      </label>
       <div className="relative">
-        <input 
-          onChange={onChangeHandler}
-          onBlur={onBlurHandler}
-          name="zipcode" 
-          value={formData.zipcode} 
-          className={`w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
-            validationErrors.zipcode 
-              ? 'border-yellow-500 bg-yellow-50' 
-              : 'bg-white hover:border-gray-400'
-          }`} 
-          type="number"
-          placeholder="5-digit ZIP code"
-          required
-        />
-        {formData.zipcode && cityZipData[formData.city] === formData.zipcode && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-              <span className="text-white text-xs">✓</span>
+        {/* Selected Payment Display */}
+        <div 
+          className={`border-2 ${showPaymentDropdown ? 'border-black' : 'border-gray-200'} bg-white rounded-xl p-5 cursor-pointer transition-all duration-300 hover:border-black`}
+          onClick={() => setShowPaymentDropdown(!showPaymentDropdown)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-lg ${selectedPaymentMethod.color.replace('text-', 'bg-')} bg-opacity-10`}>
+                {selectedPaymentMethod.icon}
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">{selectedPaymentMethod.name}</h3>
+                <p className="text-gray-600 text-sm mt-1">{selectedPaymentMethod.description}</p>
+              </div>
             </div>
+            <FaChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${showPaymentDropdown ? 'rotate-180' : ''}`} />
           </div>
-        )}
-      </div>
-      {validationErrors.zipcode && (
-        <p className="text-yellow-600 text-sm mt-2">
-          ⚠️ {validationErrors.zipcode} - Order can still be placed
-        </p>
-      )}
-      {formData.zipcode && /^\d{5}$/.test(formData.zipcode) && !validationErrors.zipcode && (
-        <p className="text-green-600 text-sm mt-2">
-          ✓ Valid ZIP code format
-        </p>
-      )}
-    </div>
-  );
-
-  const renderAddressInput = () => (
-    <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Street Address <span className="text-red-500">*</span>
-      </label>
-      <div className="relative">
-        <input 
-          onChange={onChangeHandler}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-          onFocus={() => formData.street.length >= 3 && setShowSuggestions(true)}
-          name="street" 
-          value={formData.street} 
-          className={`w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition-colors ${
-            validationErrors.street 
-              ? 'border-red-500 bg-red-50' 
-              : 'bg-white hover:border-gray-400'
-          }`} 
-          type="text"
-          placeholder="House number, street, area"
-          required
-        />
+        </div>
         
-        {isSearchingAddress && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
-          </div>
-        )}
-        
-        {showSuggestions && addressSuggestions.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-3xl shadow-lg max-h-48 overflow-y-auto">
-            {addressSuggestions.map((suggestion, index) => (
+        {/* Dropdown Menu */}
+        {showPaymentDropdown && (
+          <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+            {paymentMethods.map((method) => (
               <div
-                key={index}
-                className="p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
-                onClick={() => selectAddressSuggestion(suggestion)}
+                key={method.id}
+                className={`p-5 border-b border-gray-100 last:border-b-0 cursor-pointer transition-all duration-300 hover:bg-gray-50 ${paymentMethod === method.id ? 'bg-gray-50' : ''}`}
+                onClick={() => {
+                  setPaymentMethod(method.id);
+                  setShowPaymentDropdown(false);
+                  if (method.id === 'COD') {
+                    setPaymentScreenshot(null);
+                    setPreviewImage(null);
+                  }
+                }}
               >
-                <div className="font-medium text-sm text-gray-900">
-                  {suggestion.fullAddress}
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-lg ${method.color.replace('text-', 'bg-')} bg-opacity-10`}>
+                    {method.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900">{method.name}</h3>
+                      {paymentMethod === method.id && (
+                        <FaCheckCircle className="w-5 h-5 text-green-500" />
+                      )}
+                    </div>
+                    <p className="text-gray-600 text-sm mt-1">{method.description}</p>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-      {validationErrors.street && (
-        <p className="text-red-600 text-sm mt-2">
-          {validationErrors.street}
-        </p>
-      )}
     </div>
   );
 
-  // Render Payment Method Selection
-  const renderPaymentMethod = () => (
+  // Render Online Payment Section
+  const renderOnlinePaymentSection = () => (
     <div className="mt-8">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Payment Method</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* COD Option */}
-        <div 
-          className={`border border-gray-300 rounded-xl p-4 cursor-pointer transition-all ${
-            paymentMethod === 'COD' 
-              ? 'border-gray-900 bg-gray-50' 
-              : 'hover:border-gray-400'
-          }`}
-          onClick={() => setPaymentMethod('COD')}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-              paymentMethod === 'COD' ? 'border-gray-900 bg-gray-900' : 'border-gray-400'
-            }`}>
-              {paymentMethod === 'COD' && <div className="w-2 h-2 bg-white rounded-full"></div>}
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900">Cash on Delivery</p>
-              <p className="text-sm text-gray-600 mt-1">Pay Rs 350 now, rest on delivery</p>
-            </div>
+      <div className="bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-2xl p-8">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 bg-green-100 rounded-lg">
+            <FaCreditCard className="w-6 h-6 text-black" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Online Payment</h3>
+            <p className="text-gray-600 text-sm mt-1">Complete your payment securely</p>
           </div>
         </div>
         
-        {/* Online Payment Option */}
-        <div 
-          className={`border border-gray-300 rounded-xl p-4 cursor-pointer transition-all ${
-            paymentMethod === 'online' 
-              ? 'border-gray-900 bg-gray-50' 
-              : 'hover:border-gray-400'
-          }`}
-          onClick={() => setPaymentMethod('online')}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-              paymentMethod === 'online' ? 'border-gray-900 bg-gray-900' : 'border-gray-400'
-            }`}>
-              {paymentMethod === 'online' && <div className="w-2 h-2 bg-white rounded-full"></div>}
+        {/* Payment Details Card */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <span className="text-gray-700 font-medium text-lg">
+              Total Amount:
+            </span>
+            <span className="text-2xl font-bold text-gray-900">
+              {currency} {totalAmount.toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="space-y-5">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">EasyPaisa Number</p>
+                <p className="text-2xl font-bold text-gray-900">0348 3450302</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-700 mb-1">Account Name</p>
+                <p className="text-lg font-bold text-gray-900">Muhammad Ahmad</p>
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* Payment Screenshot Upload */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="font-semibold text-gray-900">Online Payment</p>
-              <p className="text-sm text-gray-600 mt-1">Pay full amount now via EasyPaisa</p>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">Upload Payment Proof</h4>
+              <p className="text-gray-600 text-sm">Upload screenshot of your payment confirmation</p>
+            </div>
+            <div className="px-4 py-2 bg-black text-white text-sm font-medium rounded-lg">
+              Required
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Render EasyPaisa Payment Section
-  const renderEasyPaisaPayment = () => (
-    <div className="mt-6">
-      <div className="bg-white p-6 border border-gray-300 rounded-3xl">
-        <h3 className="text-lg font-bold text-gray-900 mb-6">Payment</h3>
-        
-        <div className="space-y-4 mb-6 p-4 bg-gray-50 rounded-3xl">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-700 font-medium">
-              {paymentMethod === 'COD' ? 'Pre-payment Amount:' : 'Total Amount:'}
-            </span>
-            <span className="font-bold text-gray-900">
-              {paymentMethod === 'COD' ? 'Rs 350' : `${currency} ${totalAmount.toFixed(2)}`}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-700 font-medium">EasyPaisa Number:</span>
-            <span className="font-semibold text-gray-900">0348 3450302</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-700 font-medium">Account:</span>
-            <span className="font-semibold text-gray-900">Muhammad Ahmad</span>
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Upload Payment Screenshot <span className="text-red-500">*</span>
-          </label>
           
           {!previewImage ? (
-            <div className="border-2 border-dashed border-gray-300 rounded-3xl p-6 text-center hover:border-gray-400 transition-colors cursor-pointer">
+            <div className="border-3 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-gray-400 transition-all duration-300 cursor-pointer bg-gray-50/50">
               <input
                 type="file"
                 accept="image/*"
@@ -984,184 +848,317 @@ const PlaceOrder = () => {
                 htmlFor="payment-screenshot" 
                 className="cursor-pointer block"
               >
-                <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                  <span className="text-xl text-gray-600">📁</span>
+                <div className="mx-auto w-20 h-20 bg-black/5 rounded-full flex items-center justify-center mb-6">
+                  <FaUpload className="w-10 h-10 text-gray-600" />
                 </div>
-                <p className="text-sm font-semibold text-gray-800 mb-1">
-                  Upload Payment Screenshot
+                <p className="text-lg font-semibold text-gray-800 mb-3">
+                  Drop your screenshot here or click to upload
                 </p>
-                <p className="text-xs text-gray-500 mb-3">
-                  JPG, PNG, WebP files (Max 5MB)
+                <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+                  Upload a clear screenshot of your payment confirmation from EasyPaisa/JazzCash app
                 </p>
-                <button 
-                  type="button"
-                  className="bg-black text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-800 transition-colors"
-                >
-                  Choose File
-                </button>
+                <div className="flex items-center justify-center gap-4">
+                  <button 
+                    type="button"
+                    className="bg-black text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all duration-300 flex items-center gap-3"
+                  >
+                    <FaUpload className="w-4 h-4" />
+                    Upload File
+                  </button>
+                  <p className="text-xs text-gray-500">
+                    JPG, PNG, WebP • Max 5MB
+                  </p>
+                </div>
               </label>
             </div>
           ) : (
-            <div className="border border-gray-300 rounded-3xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-gray-800">Payment Screenshot</p>
+            <div className="border-2 border-gray-200 rounded-2xl p-6 bg-white">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-lg font-bold text-gray-800">Payment Screenshot Uploaded</p>
+                  <p className="text-sm text-gray-500">Ready for verification</p>
+                </div>
                 <button
                   type="button"
                   onClick={removePaymentScreenshot}
-                  className="text-red-500 hover:text-red-700 text-sm font-medium"
+                  className="text-red-500 hover:text-red-700 font-medium flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors"
                 >
+                  <FaTimes className="w-4 h-4" />
                   Remove
                 </button>
               </div>
-              <div className="flex justify-center">
+              <div className="flex justify-center p-4 bg-gray-50 rounded-xl">
                 <img 
                   src={previewImage} 
                   alt="Payment screenshot" 
-                  className="max-w-full h-auto max-h-40 rounded border border-gray-200"
+                  className="max-w-full h-auto max-h-56 rounded-lg border-2 border-gray-200 shadow-sm"
                 />
               </div>
             </div>
           )}
           
           {validationErrors.payment && (
-            <p className="text-red-600 text-sm mt-3 bg-red-50 p-3 rounded">
-              {validationErrors.payment}
-            </p>
+            <div className="mt-6 p-5 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <FaInfoCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <p className="text-red-700 font-medium">
+                  {validationErrors.payment}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 
-        <div className="text-sm text-gray-600 space-y-2 bg-gray-50 p-3 rounded border border-gray-200">
-          <p className="flex items-start gap-2">
-            <span className="text-gray-500 mt-0.5 flex-shrink-0">•</span>
-            <span>
-              Send <span className="font-semibold text-gray-900">
-                {paymentMethod === 'COD' ? 'Rs 350 pre-payment' : `${currency} ${totalAmount.toFixed(2)} full payment`}
-              </span> to our EasyPaisa account
+        {/* Instructions */}
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 border border-blue-200 rounded-2xl p-6">
+          <h4 className="font-bold text-gray-900 mb-4 text-lg">How to Pay:</h4>
+          <div className="space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="font-bold">1</span>
+              </div>
+              <p className="text-gray-700">
+                Open EasyPaisa or JazzCash app and send <span className="font-bold text-gray-900">{currency} {totalAmount.toFixed(2)}</span> to our account
+              </p>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="font-bold">2</span>
+              </div>
+              <p className="text-gray-700">
+                Take a clear screenshot of the payment confirmation screen
+              </p>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="font-bold">3</span>
+              </div>
+              <p className="text-gray-700">
+                Upload the screenshot above to verify your payment
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render COD Instructions
+  const renderCODInstructions = () => (
+    <div className="mt-8">
+      <div className="bg-gradient-to-r from-blue-50 to-white border border-blue-100 rounded-2xl p-8">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-3 bg-blue-100 rounded-lg">
+            <FaMoneyBillWave className="w-6 h-6 text-black" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Cash on Delivery</h3>
+            <p className="text-gray-600 text-sm mt-1">Pay when you receive your order</p>
+          </div>
+        </div>
+        
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <span className="text-gray-700 font-medium text-lg">
+              Amount to Pay on Delivery:
             </span>
-          </p>
-          <p className="flex items-start gap-2">
-            <span className="text-gray-500 mt-0.5 flex-shrink-0">•</span>
-            <span>Take a clear screenshot of the payment confirmation</span>
-          </p>
-          <p className="flex items-start gap-2">
-            <span className="text-gray-500 mt-0.5 flex-shrink-0">•</span>
-            <span>Upload the screenshot above to verify your payment</span>
-          </p>
-          {paymentMethod === 'COD' && (
-            <p className="flex items-start gap-2">
-              <span className="text-gray-500 mt-0.5 flex-shrink-0">•</span>
-              <span>Pay remaining balance when your order is delivered</span>
-            </p>
-          )}
+            <span className="text-2xl font-bold text-gray-900">
+              {currency} {totalAmount.toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="space-y-4 bg-gray-50 p-5 rounded-lg">
+            <div className="flex items-start gap-4">
+              <div className="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <FaCheck className="w-3 h-3" />
+              </div>
+              <p className="text-gray-700">
+                Your order will be prepared and shipped to your address
+              </p>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <FaCheck className="w-3 h-3" />
+              </div>
+              <p className="text-gray-700">
+                Pay the full amount to our delivery representative when you receive your order
+              </p>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <FaCheck className="w-3 h-3" />
+              </div>
+              <p className="text-gray-700">
+                Cash payments only - please have exact change ready
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
-          <p className="text-gray-600">Complete your order with delivery information</p>
+    <>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Header */}
+          <div className="mb-12 text-center">
+            <div className="mb-6">
+          <Title text1={'Complete Your'} text2={'Order'} />
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Delivery Information */}
-          <div className="bg-white rounded-3xl border border-gray-300 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Delivery Information</h2>
-            
-            <form onSubmit={onSubmitHandler} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderInputField('fullName', 'text', 'Enter full name', 'Full Name')}
-                {renderInputField('email', 'email', 'your@email.com', 'Email Address')}
-              </div>
-              
-              {renderAddressInput()}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderSelectField('state', pakistanStates, 'Select province', 'Province')}
-                {renderCityInput()}
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderZipCodeInput()}
-                {renderInputField('phone', 'tel', '03XX-XXXXXXX', 'Phone Number')}
-              </div>
-
-              {renderPaymentMethod()}
-              {renderEasyPaisaPayment()}
-            </form>
+          
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              Review your information and choose your preferred payment method
+            </p>
           </div>
 
-          {/* Right Column - Order Summary */}
-          <div className="lg:sticky lg:top-4 lg:h-fit space-y-6">
-            <div className="bg-white rounded-3xl border border-gray-300 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
-              <CartTotal/>
-           
-            
-            {/* Place Order Button */}
-            <div className=" p-8">
-              <button 
-                type='submit' 
-                onClick={onSubmitHandler}
-                className={`w-full bg-black text-white px-6 py-4 font-semibold rounded-3xl hover:bg-gray-800 transition-colors ${
-                  loading || !isDataReady || isValidatingAddress || isUploadingPayment || !paymentScreenshot
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : ''
-                }`}
-                disabled={loading || !isDataReady || isValidatingAddress || isUploadingPayment || !paymentScreenshot}
-              >
-                {isUploadingPayment ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Uploading Payment...
-                  </span>
-                ) : isValidatingAddress ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Validating Address...
-                  </span>
-                ) : loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Placing Order...
-                  </span>
-                ) : !isDataReady ? (
-                  'Loading...'
-                ) : !paymentScreenshot ? (
-                  'Upload Payment to Place Order'
-                ) : paymentMethod === 'COD' ? (
-                  `Place Order - Rs 350`
-                ) : (
-                  `Place Order - ${currency} ${totalAmount.toFixed(2)}`
-                )}
-              </button>
-               </div>
-           {/* Validation Summary */}
-{Object.keys(validationErrors).length > 0 && (
-  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-3xl">
-    <p className="text-red-700 text-sm font-medium">
-      Please fix the following errors before placing your order:
-    </p>
-    <ul className="text-red-600 text-sm mt-2 space-y-1">
-      {Object.entries(validationErrors).map(([field, error]) => (
-        field !== 'zipcode' && (
-          <li key={field} className="flex items-center gap-2">
-            <span>•</span> {error}
-          </li>
-        )
-      ))}
-    </ul>
-  </div>
-)}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column - Delivery Information */}
+            <div>
+              <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
+                  <div className="p-3 bg-black/5 rounded-lg">
+                    <FaMapMarkerAlt className="w-6 h-6 text-black" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Delivery Information</h2>
+                    <p className="text-gray-600 text-sm mt-1">Where should we deliver your order?</p>
+                  </div>
+                </div>
+                
+                <form onSubmit={onSubmitHandler} className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderInputField('fullName', 'text', 'Enter your full name', 'Full Name', true, <FaUser />)}
+                    {renderInputField('email', 'email', 'your.email@example.com', 'Email Address', true, <FaEnvelope />)}
+                  </div>
+                  
+                  {renderInputField('street', 'text', 'House #, Street, Area', 'Street Address', true, <FaHome />)}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderSelectField('state', pakistanStates, 'Select your province', 'Province', true, <FaGlobeAsia />)}
+                    {renderSelectField('city', cities, cities.length ? 'Select your city' : 'Select province first', 'City', true, <FaCity />)}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderInputField('zipcode', 'number', '5-digit ZIP code', 'ZIP Code', true)}
+                    {renderInputField('phone', 'tel', '0300-1234567', 'Phone Number', true, <FaPhone />)}
+                  </div>
+
+                  {renderPaymentDropdown()}
+                  {paymentMethod === 'online' && renderOnlinePaymentSection()}
+                  {paymentMethod === 'COD' && renderCODInstructions()}
+                </form>
+              </div>
+            </div>
+
+            {/* Right Column - Order Summary */}
+            <div className="lg:sticky lg:top-8 lg:h-fit">
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
+                  <div className="p-3 bg-black/5 rounded-lg">
+                    <FaReceipt className="w-6 h-6 text-black" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Order Summary</h2>
+                    <p className="text-gray-600 text-sm mt-1">Review your order details</p>
+                  </div>
+                </div>
+                
+                <CartTotal />
+                
+                {/* Payment Summary */}
+                <div className="mt-8 p-6 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Summary</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-700">Payment Method:</span>
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded ${selectedPaymentMethod.color.replace('text-', 'bg-')} bg-opacity-10`}>
+                          {selectedPaymentMethod.icon}
+                        </div>
+                        <span className="font-semibold text-gray-900">{selectedPaymentMethod.name}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                      <span className="text-lg font-bold text-gray-900">Amount to Pay:</span>
+                      <span className="text-2xl font-bold text-gray-900">
+                        {paymentMethod === 'online' ? 'Now' : 'On Delivery'}: {currency} {totalAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+       
+                {/* Place Order Button */}
+                <div className="mt-8">
+                  <button 
+                    type='submit' 
+                    onClick={onSubmitHandler}
+                    className={`mt-6 w-full flex items-center justify-center gap-2 py-4 px-4 bg-black hover:bg-white text-white hover:text-black font-semibold rounded-full border border-transparent hover:border-black transition-all duration-300 hover:scale-105 whitespace-nowrap ${
+                      loading || isUploadingPayment || (paymentMethod === 'online' && !paymentScreenshot)
+                        ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:bg-black hover:text-white' 
+                        : ''
+                    }`}
+                    disabled={loading || isUploadingPayment || (paymentMethod === 'online' && !paymentScreenshot)}
+                  >
+                    {isUploadingPayment ? (
+                      <>
+                        <FaSpinner className="animate-spin w-5 h-5" />
+                        Verifying Payment...
+                      </>
+                    ) : loading ? (
+                      <>
+                        <FaSpinner className="animate-spin w-5 h-5" />
+                        Processing Order...
+                      </>
+                    ) : paymentMethod === 'online' && !paymentScreenshot ? (
+                      'Upload Payment to Continue'
+                    ) : (
+                      <>
+                        <span>Place Order & Continue</span>
+                        <FaArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Validation Summary */}
+                  {Object.keys(validationErrors).length > 0 && (
+                    <div className="mt-6 p-5 bg-red-50 border border-red-200 rounded-xl">
+                      <div className="flex items-center gap-3 mb-3">
+                        <FaInfoCircle className="w-5 h-5 text-red-500" />
+                        <p className="text-red-700 font-medium">Please fix the following:</p>
+                      </div>
+                      <ul className="text-red-600 text-sm space-y-2 pl-8">
+                        {Object.entries(validationErrors).map(([field, error]) => (
+                          <li key={field} className="list-disc">
+                            {error}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Terms */}
+                  <p className="text-xs text-gray-500 text-center mt-6">
+                    By placing your order, you agree to our{' '}
+                    <a href="/terms" className="text-black font-medium underline hover:text-gray-700">Terms of Service</a>{' '}
+                    and{' '}
+                    <a href="/privacy" className="text-black font-medium underline hover:text-gray-700">Privacy Policy</a>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Login Modal - only opens when explicitly triggered */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        initialMode={authMode}
+      />
+    </>
   );
 };
 

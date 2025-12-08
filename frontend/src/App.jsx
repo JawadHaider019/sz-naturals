@@ -5,7 +5,7 @@ import Home from './pages/Home'
 import Collection from './pages/Collection'
 import About from './pages/About'
 import Contact from './pages/Contact'
-import Login from './pages/Login'
+import Login from './components/Login'
 import Product from './pages/Product'
 import Deal from './pages/Deal';
 import Cart from './pages/Cart'
@@ -13,7 +13,7 @@ import Orders from './pages/Orders'
 import PlaceOrder from './pages/PlaceOrder'
 import Blog from './pages/Blog'
 import BlogPost from './pages/BlogPost'
-import FaqBot from './components/FaqBot'
+
 import { ToastContainer } from 'react-toastify'
 import Footer from './components/Footer'
 import 'react-toastify/dist/ReactToastify.css'
@@ -42,7 +42,7 @@ const LogoSEO = () => {
 
 const App = () => {
   return (
-    <div className="px-4">
+    <div >
       <Favicon />
       <ToastContainer
         position="top-right"
@@ -73,12 +73,12 @@ const App = () => {
       <Navbar/>
       <Routes>
         <Route path='/' element={<Home/>}/>
-        <Route path='/collection' element={<Collection/>}/>
+        <Route path='/shop' element={<Collection/>}/>
         <Route path='/about' element={<About/>}/>
         <Route path='/contact' element={<Contact/>}/>
         <Route path='/product/:productId' element={<Product/>}/>
         <Route path="/deal/:dealId" element={<Deal />} />
-        <Route path="/collection/product/:productId" element={<Product />} />
+        <Route path="/shop/product/:productId" element={<Product />} />
         <Route path='/login' element={<Login/>}/>
         <Route path='/cart' element={<Cart/>}/>
         <Route path='/blog' element={<Blog/>}/>
@@ -90,7 +90,7 @@ const App = () => {
         <Route path='/images/logo.png' element={<LogoSEO />} />
       </Routes>
       <Footer/>
-      <FaqBot />
+
     </div>
   )
 }

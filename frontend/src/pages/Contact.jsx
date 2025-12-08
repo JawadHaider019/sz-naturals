@@ -398,106 +398,13 @@ const Contact = () => {
       </div>
 
       {/* Main Content - Form with Sidebar */}
-      <div className="w-full">
+      <div className="w-full mx-auto px-4 pb-12">
+        
         <div className="grid grid-cols-1 lg:grid-cols-5">
           {/* Contact Form - 3 columns */}
-          <div className="lg:col-span-3 p-4">
-            <div className="bg-white border border-black/50 rounded-3xl shadow-sm">
-              <div className="p-6 border-b border-black/50">
-                <h2 className="text-2xl font-bold text-gray-900">Send Us a Message</h2>
-                <p className="text-gray-600 mt-1">Fill out the form below and we'll get back to you soon</p>
-              </div>
-
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      placeholder="Enter your full name"
-                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-3xl"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="Enter your email address"
-                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-3xl"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="Enter your phone number"
-                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-3xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-                    <select
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleInputChange}
-                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-3xl"
-                      required
-                    >
-                      <option value="">Select a subject</option>
-                      <option value="bulk-order">Bulk Order</option>
-                      <option value="general">General Inquiry</option>
-                      <option value="order-support">Order Support</option>
-                      <option value="feedback">Feedback</option>
-                      <option value="suggestions">Suggestions</option>
-                      <option value="partnership">Partnership</option>
-                      <option value="technical-support">Technical Support</option>
-                      <option value="shipping-issues">Shipping & Delivery Issues</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Your Message *</label>
-                  <textarea
-                    name="message"
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    placeholder="Tell us how we can help you..."
-                    rows="5"
-                    className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white resize-none rounded-3xl"
-                    required
-                  ></textarea>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-black text-white py-3 px-6 font-semibold text-base hover:bg-gray-800 transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed rounded-3xl"
-                >
-                  {submitting ? 'Sending...' : 'Send Message'}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {/* Sidebar - Contact Information - 2 columns */}
+            {/* Sidebar - Contact Information - 2 columns */}
           <div className="lg:col-span-2 p-4">
-            <div className="bg-white p-6 border border-black/50 rounded-3xl shadow-sm sticky top-6">
+            <div className="bg-white p-6 border border-black/50 rounded-xl shadow-sm sticky top-6">
               <h3 className="text-xl font-bold text-gray-900 mb-6 border-b border-black/50 pb-4">
                 Contact Info
               </h3>
@@ -576,6 +483,101 @@ const Contact = () => {
               </div>
             </div>
           </div>
+          <div className="lg:col-span-3 p-4">
+            <div className="bg-white border border-black/50 rounded-xl shadow-sm">
+              <div className="p-6 border-b border-black/50">
+                <h2 className="text-2xl font-bold text-gray-900">Send Us a Message</h2>
+                <p className="text-gray-600 mt-1">Fill out the form below and we'll get back to you soon</p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="Enter your full name"
+                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-xl"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Enter your email address"
+                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-xl"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="Enter your phone number"
+                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
+                    <select
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleInputChange}
+                      className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white rounded-xl"
+                      required
+                    >
+                      <option value="">Select a subject</option>
+                      <option value="bulk-order">Bulk Order</option>
+                      <option value="general">General Inquiry</option>
+                      <option value="order-support">Order Support</option>
+                      <option value="feedback">Feedback</option>
+                      <option value="suggestions">Suggestions</option>
+                      <option value="partnership">Partnership</option>
+                      <option value="technical-support">Technical Support</option>
+                      <option value="shipping-issues">Shipping & Delivery Issues</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Your Message *</label>
+                  <textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    placeholder="Tell us how we can help you..."
+                    rows="5"
+                    className="w-full border border-gray-300 p-3 focus:outline-none focus:border-black transition-all bg-white resize-none rounded-xl"
+                    required
+                  ></textarea>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-black hover:bg-white text-white hover:text-black font-semibold rounded-full border border-transparent hover:border-black transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto whitespace-nowrap"
+                                        >
+                  {submitting ? 'Sending...' : 'Send Message'}
+                </button>
+              </form>
+            </div>
+          </div>
+
+        
         </div>
       </div>
 

@@ -34,7 +34,10 @@ import {
   faMoneyBillWave,
   faCreditCard,
   faWallet,
-  faFileInvoiceDollar
+  faFileInvoiceDollar,
+  faMoneyBill,
+  faHandHoldingUsd,
+  faCaretDown
 } from '@fortawesome/free-solid-svg-icons';
 
 // Constants
@@ -50,15 +53,52 @@ const STATUS_CONFIG = {
   'Payment Rejected': { icon: faTimesCircle, label: 'Payment Rejected' },
 };
 
-const TABS = [
-  { id: 'all', label: 'All Orders', icon: faList },
-  { id: 'pending_verification', label: 'Pending Verification', icon: faHourglassHalf },
-  { id: 'pending', label: 'Order Placed', icon: faClock },
-  { id: 'packing', label: 'Packing', icon: faBox },
-  { id: 'shipped', label: 'Shipped', icon: faShippingFast },
-  { id: 'out_for_delivery', label: 'Out for Delivery', icon: faMotorcycle },
-  { id: 'delivered', label: 'Delivered', icon: faCheckCircle },
-  { id: 'cancelled', label: 'Cancelled', icon: faTimesCircle },
+const PAYMENT_METHOD_CONFIG = {
+  'COD': { 
+    icon: faMoneyBill, 
+    label: 'Cash on Delivery', 
+    color: 'text-black', 
+    bgColor: 'bg-blue-50', 
+    borderColor: 'border-blue-200',
+    autoVerified: true
+  },
+  'online': { 
+    icon: faCreditCard, 
+    label: 'Online Payment', 
+    color: 'text-green-600', 
+    bgColor: 'bg-green-50', 
+    borderColor: 'border-green-200',
+    autoVerified: false
+  },
+  'easypaisa': { 
+    icon: faWallet, 
+    label: 'Easypaisa', 
+    color: 'text-purple-600', 
+    bgColor: 'bg-purple-50', 
+    borderColor: 'border-purple-200',
+    autoVerified: false
+  },
+  'jazzcash': { 
+    icon: faWallet, 
+    label: 'JazzCash', 
+    color: 'text-orange-600', 
+    bgColor: 'bg-orange-50', 
+    borderColor: 'border-orange-200',
+    autoVerified: false
+  },
+};
+
+const FILTER_OPTIONS = [
+  { id: 'all', label: 'All Orders', icon: faList, count: 0 },
+  { id: 'pending_verification', label: 'Pending Verification', icon: faHourglassHalf, count: 0 },
+  { id: 'pending', label: 'Order Placed', icon: faClock, count: 0 },
+  { id: 'packing', label: 'Packing', icon: faBox, count: 0 },
+  { id: 'shipped', label: 'Shipped', icon: faShippingFast, count: 0 },
+  { id: 'out_for_delivery', label: 'Out for Delivery', icon: faMotorcycle, count: 0 },
+  { id: 'delivered', label: 'Delivered', icon: faCheckCircle, count: 0 },
+  { id: 'cancelled', label: 'Cancelled', icon: faTimesCircle, count: 0 },
+  { id: 'COD', label: 'COD Orders', icon: faMoneyBill, count: 0 },
+  { id: 'online', label: 'Online Orders', icon: faCreditCard, count: 0 },
 ];
 
 const SORT_OPTIONS = [
@@ -93,17 +133,18 @@ const ImageModal = ({ imageUrl, isOpen, onClose }) => {
 };
 
 // Custom Hooks
-const useOrdersFilter = (orders, activeTab, searchTerm, sortBy) => {
+const useOrdersFilter = (orders, activeFilter, searchTerm, sortBy) => {
   return useMemo(() => {
     let filtered = orders;
 
-    if (activeTab !== 'all') {
+    if (activeFilter !== 'all') {
       filtered = filtered.filter(order => {
-        switch (activeTab) {
+        switch (activeFilter) {
           case 'pending_verification':
-            return order.paymentStatus === 'pending';
+            return order.paymentMethod !== 'COD' && order.paymentStatus === 'pending';
           case 'pending':
-            return (order.status === 'Order Placed' || order.status === 'Pending') && order.paymentStatus === 'verified';
+            return (order.status === 'Order Placed' || order.status === 'Pending') && 
+                   (order.paymentMethod === 'COD' ? true : order.paymentStatus === 'verified');
           case 'packing':
             return order.status === 'Packing';
           case 'shipped':
@@ -114,6 +155,10 @@ const useOrdersFilter = (orders, activeTab, searchTerm, sortBy) => {
             return order.status === 'Delivered';
           case 'cancelled':
             return order.status === 'Cancelled' || order.paymentStatus === 'rejected';
+          case 'COD':
+            return order.paymentMethod === 'COD';
+          case 'online':
+            return order.paymentMethod !== 'COD' && order.paymentMethod !== undefined;
           default:
             return true;
         }
@@ -149,7 +194,7 @@ const useOrdersFilter = (orders, activeTab, searchTerm, sortBy) => {
     });
 
     return filtered;
-  }, [orders, activeTab, searchTerm, sortBy]);
+  }, [orders, activeFilter, searchTerm, sortBy]);
 };
 
 // Sub-components
@@ -180,34 +225,124 @@ const AccessRequired = ({ navigate }) => (
   </div>
 );
 
-const EmptyState = ({ activeTab, searchTerm, onClearSearch }) => (
-  <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-    <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-      <FontAwesomeIcon icon={faReceipt} className="text-gray-400 text-2xl" />
-    </div>
-    <h3 className="text-xl font-semibold text-black mb-3">
-      {searchTerm ? 'No orders found' : `No ${activeTab === 'all' ? '' : activeTab.replace('_', ' ')} orders`}
-    </h3>
-    <p className="text-gray-500 mb-6 max-w-md mx-auto">
-      {searchTerm 
-        ? 'Try adjusting your search terms.'
-        : activeTab !== 'all' 
-          ? `No ${activeTab.replace('_', ' ')} orders available.`
-          : 'No orders have been placed yet.'
-      }
-    </p>
-    {searchTerm && (
-      <button
-        onClick={onClearSearch}
-        className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium"
-      >
-        Clear Search
-      </button>
-    )}
-  </div>
-);
+const EmptyState = ({ activeFilter, searchTerm, onClearSearch }) => {
+  const getFilterLabel = (filterId) => {
+    const filter = FILTER_OPTIONS.find(f => f.id === filterId);
+    return filter ? filter.label : 'orders';
+  };
 
-const SearchAndFilterBar = ({ searchTerm, onSearchChange, sortBy, onSortChange }) => (
+  return (
+    <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+      <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+        <FontAwesomeIcon icon={faReceipt} className="text-gray-400 text-2xl" />
+      </div>
+      <h3 className="text-xl font-semibold text-black mb-3">
+        {searchTerm ? 'No orders found' : `No ${activeFilter === 'all' ? '' : getFilterLabel(activeFilter).toLowerCase()}`}
+      </h3>
+      <p className="text-gray-500 mb-6 max-w-md mx-auto">
+        {searchTerm 
+          ? 'Try adjusting your search terms.'
+          : activeFilter !== 'all' 
+            ? `No ${getFilterLabel(activeFilter).toLowerCase()} available.`
+            : 'No orders have been placed yet.'
+        }
+      </p>
+      {searchTerm && (
+        <button
+          onClick={onClearSearch}
+          className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium"
+        >
+          Clear Search
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Updated Filter Dropdown Component
+const FilterDropdown = ({ activeFilter, onFilterChange, filterOptions }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const activeOption = filterOptions.find(opt => opt.id === activeFilter);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full lg:w-auto px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white min-w-[200px]"
+      >
+        <div className="flex items-center">
+          <FontAwesomeIcon 
+            icon={activeOption?.icon || faFilter} 
+            className="mr-3 text-gray-600" 
+          />
+          <span className="font-medium text-black">
+            {activeOption?.label || 'Filter Orders'}
+          </span>
+        </div>
+        <FontAwesomeIcon 
+          icon={faCaretDown} 
+          className={`ml-3 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+        />
+      </button>
+
+      {isOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute top-full left-0 mt-1 w-full lg:w-64 bg-white rounded-lg border border-gray-200 shadow-lg z-20 max-h-96 overflow-y-auto">
+            <div className="p-2">
+              {filterOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => {
+                    onFilterChange(option.id);
+                    setIsOpen(false);
+                  }}
+                  className={`flex items-center justify-between w-full px-3 py-2.5 rounded text-left hover:bg-gray-50 transition-colors ${
+                    activeFilter === option.id 
+                      ? 'bg-gray-100 text-black font-medium' 
+                      : 'text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <FontAwesomeIcon 
+                      icon={option.icon} 
+                      className={`mr-3 text-sm ${
+                        activeFilter === option.id ? 'text-black' : 'text-gray-500'
+                      }`} 
+                    />
+                    <span>{option.label}</span>
+                  </div>
+                  {option.count > 0 && (
+                    <span className={`px-2 py-1 text-xs rounded-full min-w-6 text-center ${
+                      activeFilter === option.id 
+                        ? 'bg-gray-200 text-black' 
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {option.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const SearchAndFilterBar = ({ 
+  searchTerm, 
+  onSearchChange, 
+  sortBy, 
+  onSortChange,
+  activeFilter,
+  onFilterChange,
+  filterOptions 
+}) => (
   <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
     <div className="flex flex-col lg:flex-row gap-4">
       <div className="flex-1">
@@ -226,6 +361,11 @@ const SearchAndFilterBar = ({ searchTerm, onSearchChange, sortBy, onSortChange }
         </div>
       </div>
       <div className="flex gap-3">
+        <FilterDropdown
+          activeFilter={activeFilter}
+          onFilterChange={onFilterChange}
+          filterOptions={filterOptions}
+        />
         <div className="relative">
           <FontAwesomeIcon 
             icon={faFilter} 
@@ -248,43 +388,33 @@ const SearchAndFilterBar = ({ searchTerm, onSearchChange, sortBy, onSortChange }
   </div>
 );
 
-const TabsNavigation = ({ tabs, activeTab, onTabChange }) => (
-  <div className="bg-white rounded-lg border border-gray-200 mb-6 overflow-hidden">
-    <div className="flex overflow-x-auto px-2 py-2">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => onTabChange(tab.id)}
-          className={`flex items-center px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 whitespace-nowrap flex-shrink-0 mx-1 rounded-lg ${
-            activeTab === tab.id
-              ? 'border-black text-black bg-gray-50'
-              : 'border-transparent text-gray-500 hover:text-black hover:bg-gray-50'
-          }`}
-        >
-          <FontAwesomeIcon 
-            icon={tab.icon} 
-            className={`text-sm mr-3 ${activeTab === tab.id ? 'text-black' : 'text-gray-400'}`} 
-          />
-          <span className="font-medium">{tab.label}</span>
-          <span className={`ml-2 px-2 py-1 text-xs rounded-full min-w-6 text-center ${
-            activeTab === tab.id 
-              ? 'bg-gray-200 text-black' 
-              : 'bg-gray-100 text-gray-600'
-          }`}>
-            {tab.count}
-          </span>
-        </button>
-      ))}
-    </div>
-  </div>
-);
+// Payment Method Badge Component
+const PaymentMethodBadge = ({ paymentMethod, paymentMethodDetail }) => {
+  const method = paymentMethod || 'COD';
+  const detail = paymentMethodDetail || PAYMENT_METHOD_CONFIG[method]?.label || 'Cash on Delivery';
+  const config = PAYMENT_METHOD_CONFIG[method] || PAYMENT_METHOD_CONFIG.COD;
+  
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.color} border ${config.borderColor}`}>
+      <FontAwesomeIcon icon={config.icon} className="mr-1" />
+      {detail}
+    </span>
+  );
+};
 
-// Payment Verification Component
+// Payment Verification Component - Only for online payments
 const PaymentVerification = ({ order, onVerificationComplete }) => {
   const [verifying, setVerifying] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showImageModal, setShowImageModal] = useState(false);
   const { token } = useAuth();
+
+  // Don't show verification for COD orders
+  if (order.paymentMethod === 'COD') {
+    return null;
+  }
+
+  const paymentMethodLabel = PAYMENT_METHOD_CONFIG[order.paymentMethod]?.label || 'Online Payment';
 
   const handleVerifyPayment = async (action) => {
     if (action === 'reject' && !rejectionReason.trim()) {
@@ -320,9 +450,9 @@ const PaymentVerification = ({ order, onVerificationComplete }) => {
 
   return (
     <>
-      <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 mb-4">
+      <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-4">
         <h5 className="text-lg font-semibold text-black mb-3 flex items-center">
-          <FontAwesomeIcon icon={faHourglassHalf} className="mr-2" />
+          <FontAwesomeIcon icon={faHourglassHalf} className="mr-2 text-yellow-600" />
           Payment Verification Required
         </h5>
         
@@ -355,7 +485,6 @@ const PaymentVerification = ({ order, onVerificationComplete }) => {
                     <FontAwesomeIcon icon={faEye} className="mr-2" />
                     View
                   </button>
-              
                 </div>
               </div>
             </div>
@@ -364,7 +493,7 @@ const PaymentVerification = ({ order, onVerificationComplete }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div className="bg-white rounded p-2 border border-gray-200">
               <p className="text-gray-600 font-medium text-xs mb-1">Payment Method</p>
-              <p className="text-black font-semibold">{order.paymentMethodDetail || 'EasyPaisa'}</p>
+              <p className="text-black font-semibold">{paymentMethodLabel}</p>
             </div>
             <div className="bg-white rounded p-2 border border-gray-200">
               <p className="text-gray-600 font-medium text-xs mb-1">Amount Paid</p>
@@ -377,7 +506,7 @@ const PaymentVerification = ({ order, onVerificationComplete }) => {
               <button
                 onClick={() => handleVerifyPayment('approve')}
                 disabled={verifying}
-                className="flex-1 flex items-center justify-center px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {verifying ? (
                   <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
@@ -390,7 +519,7 @@ const PaymentVerification = ({ order, onVerificationComplete }) => {
               <button
                 onClick={() => handleVerifyPayment('reject')}
                 disabled={verifying}
-                className="flex-1 flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-black rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 flex items-center justify-center px-4 py-2 bg-white border border-red-300 text-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {verifying ? (
                   <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
@@ -409,7 +538,7 @@ const PaymentVerification = ({ order, onVerificationComplete }) => {
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Enter reason for rejection..."
-                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-black focus:border-black text-sm resize-none bg-white"
+                className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm resize-none bg-white"
                 rows="2"
               />
             </div>
@@ -426,25 +555,60 @@ const PaymentVerification = ({ order, onVerificationComplete }) => {
   );
 };
 
-// Payment Status Badge
-const PaymentStatusBadge = ({ paymentStatus }) => {
-  const getStatusConfig = (status) => {
+// Payment Status Badge - Handles COD as auto-verified
+const PaymentStatusBadge = ({ paymentStatus, paymentMethod }) => {
+  const getStatusConfig = (status, method) => {
+    // For COD orders, always show as auto-approved
+    if (method === 'COD') {
+      return { 
+        text: 'Auto Approved',
+        icon: faCheckCircle, 
+        color: 'text-black', 
+        bgColor: 'bg-blue-50', 
+        borderColor: 'border-blue-200' 
+      };
+    }
+    
     switch (status) {
       case 'verified':
-        return { text: 'Verified', icon: faCheckCircle };
+        return { 
+          text: 'Verified', 
+          icon: faCheckCircle, 
+          color: 'text-green-600', 
+          bgColor: 'bg-green-50', 
+          borderColor: 'border-green-200' 
+        };
       case 'pending':
-        return { text: 'Pending Verification', icon: faHourglassHalf };
+        return { 
+          text: 'Pending Verification', 
+          icon: faHourglassHalf, 
+          color: 'text-yellow-600', 
+          bgColor: 'bg-yellow-50', 
+          borderColor: 'border-yellow-200' 
+        };
       case 'rejected':
-        return { text: 'Rejected', icon: faTimesCircle };
+        return { 
+          text: 'Rejected', 
+          icon: faTimesCircle, 
+          color: 'text-red-600', 
+          bgColor: 'bg-red-50', 
+          borderColor: 'border-red-200' 
+        };
       default:
-        return { text: 'Unknown', icon: faClock };
+        return { 
+          text: 'Unknown', 
+          icon: faClock, 
+          color: 'text-gray-600', 
+          bgColor: 'bg-gray-50', 
+          borderColor: 'border-gray-200' 
+        };
     }
   };
 
-  const config = getStatusConfig(paymentStatus);
+  const config = getStatusConfig(paymentStatus, paymentMethod);
 
   return (
-    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-black border border-gray-300">
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.color} border ${config.borderColor}`}>
       <FontAwesomeIcon icon={config.icon} className="mr-1" />
       {config.text}
     </span>
@@ -462,18 +626,28 @@ const BillingSummary = ({ order }) => {
     const deliveryCharges = order.deliveryCharges || 0;
     const total = subtotal + deliveryCharges;
     
-    // Calculate prepaid amount
-    const prepaidAmount = order.paymentStatus === 'verified' ? 
+    // COD orders are automatically considered verified
+    const isCOD = order.paymentMethod === 'COD';
+    const isOnlinePayment = !isCOD;
+    const isPaymentVerified = isCOD ? true : order.paymentStatus === 'verified';
+    
+    const prepaidAmount = isOnlinePayment && isPaymentVerified ? 
       (order.paymentAmount || order.amount || total) : 0;
     
-    // Calculate remaining amount (for COD orders or partial payments)
-    const remainingAmount = order.paymentMethod === 'cod' ? 
-      total : Math.max(0, total - prepaidAmount);
+    // For COD: full amount to collect on delivery
+    // For Online: remaining amount after verification
+    let remainingAmount;
+    if (isCOD) {
+      remainingAmount = total; // Full amount for COD (pay on delivery)
+    } else if (isPaymentVerified) {
+      remainingAmount = Math.max(0, total - prepaidAmount);
+    } else {
+      remainingAmount = total; // Online pending verification
+    }
     
-    // Calculate payment method details
-    const paymentMethod = order.paymentMethod || 'cod';
+    const paymentMethod = order.paymentMethod || 'COD';
     const paymentMethodDetail = order.paymentMethodDetail || 
-      (paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment');
+      PAYMENT_METHOD_CONFIG[paymentMethod]?.label || 'Cash on Delivery';
 
     return {
       subtotal,
@@ -484,7 +658,10 @@ const BillingSummary = ({ order }) => {
       paymentMethod,
       paymentMethodDetail,
       isFullyPaid: remainingAmount === 0,
-      isPrepaid: prepaidAmount > 0
+      isPrepaid: prepaidAmount > 0,
+      isOnlinePayment,
+      isPaymentVerified,
+      isCOD
     };
   }, [order]);
 
@@ -517,7 +694,7 @@ const BillingSummary = ({ order }) => {
         <div className="space-y-2 pt-3 border-t border-gray-300">
           <div className="flex justify-between">
             <span className="text-gray-600 flex items-center">
-              <FontAwesomeIcon icon={faCreditCard} className="mr-1 text-sm" />
+              <FontAwesomeIcon icon={billingDetails.isCOD ? faMoneyBill : faCreditCard} className="mr-1 text-sm" />
               Payment Method:
             </span>
             <span className="font-semibold text-black">{billingDetails.paymentMethodDetail}</span>
@@ -534,19 +711,7 @@ const BillingSummary = ({ order }) => {
               </span>
             </div>
           )}
-          
-          {billingDetails.remainingAmount > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-600 flex items-center">
-                <FontAwesomeIcon icon={faMoneyBillWave} className="mr-1 text-sm text-blue-600" />
-                Remaining Amount:
-              </span>
-              <span className="font-semibold text-blue-600">
-                {currency}{billingDetails.remainingAmount.toFixed(2)}
-              </span>
-            </div>
-          )}
-          
+         
           {billingDetails.isFullyPaid && (
             <div className="flex justify-between pt-2 border-t border-gray-300">
               <span className="text-gray-600 flex items-center">
@@ -560,19 +725,6 @@ const BillingSummary = ({ order }) => {
           )}
         </div>
 
-        {/* Payment Status Summary */}
-        <div className="mt-3 p-2 bg-white rounded border border-gray-200">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-600">Final Amount to Collect:</span>
-            <span className={`text-sm font-bold ${
-              billingDetails.remainingAmount > 0 ? 'text-blue-600' : 'text-green-600'
-            }`}>
-              {currency}{billingDetails.remainingAmount > 0 ? 
-                billingDetails.remainingAmount.toFixed(2) : 
-                '0.00'}
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -608,17 +760,34 @@ const OrderCard = ({
   
   const total = subtotal + (order.deliveryCharges || 0);
   const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG['Pending'];
+  
+  // Determine if this order needs verification (only online payments)
+  const needsVerification = order.paymentMethod !== 'COD' && order.paymentStatus === 'pending';
+  
+  // Determine if status can be updated
+  const canUpdateStatus = (order.paymentMethod === 'COD' || order.paymentStatus === 'verified') && 
+        order.status !== 'Cancelled' && 
+       order.status !== 'Delivered';
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
+      {/* Header with different background for COD vs Online */}
       <div className={`px-4 py-4 border-b ${
         order.status === 'Cancelled' || order.paymentStatus === 'rejected' ? 'bg-gray-100' : 
-        order.paymentStatus === 'pending' ? 'bg-gray-50' : 'bg-white'
+        needsVerification ? 'bg-yellow-50' : 
+        order.paymentMethod === 'COD' ? 'bg-blue-50' : 'bg-white'
       }`}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center flex-1 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center mr-3">
-              <FontAwesomeIcon icon={statusConfig.icon} className="text-black" />
+            <div className={`h-10 w-10 rounded-lg flex items-center justify-center mr-3 ${
+              order.paymentMethod === 'COD' ? 'bg-blue-100' : 
+              needsVerification ? 'bg-yellow-100' : 
+              'bg-gray-100'
+            }`}>
+              <FontAwesomeIcon 
+                icon={order.paymentMethod === 'COD' ? faMoneyBill : statusConfig.icon} 
+                className={order.paymentMethod === 'COD' ? 'text-black' : 'text-black'} 
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -631,7 +800,14 @@ const OrderCard = ({
                       <FontAwesomeIcon icon={statusConfig.icon} className="mr-1" />
                       {order.status}
                     </span>
-                    <PaymentStatusBadge paymentStatus={order.paymentStatus} />
+                    <PaymentMethodBadge 
+                      paymentMethod={order.paymentMethod} 
+                      paymentMethodDetail={order.paymentMethodDetail}
+                    />
+                    <PaymentStatusBadge 
+                      paymentStatus={order.paymentStatus} 
+                      paymentMethod={order.paymentMethod}
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-600">
@@ -661,18 +837,24 @@ const OrderCard = ({
           <div className="text-right">
             <p className="text-xl font-bold text-black">{currency}{total.toFixed(2)}</p>
             <p className="text-sm text-gray-600">{totalItemsCount} items</p>
+            <p className={`text-xs font-medium mt-1 ${
+              order.paymentMethod === 'COD' ? 'text-black' : 'text-gray-600'
+            }`}>
+              {order.paymentMethod === 'COD' ? 'COD ' : 'Online Payment'}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="p-4">
-        {order.paymentStatus === 'pending' && (
+        {/* Show payment verification only for online payments */}
+        {needsVerification && (
           <PaymentVerification 
             order={order} 
             onVerificationComplete={onVerificationComplete}
           />
         )}
-        
+          
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Order Items */}
           <div className="flex-1">
@@ -710,6 +892,13 @@ const OrderCard = ({
                     <p className="text-gray-600 text-xs">EMAIL</p>
                     <p className="font-semibold text-black">{customerInfo.email}</p>
                   </div>
+                  <div>
+                    <p className="text-gray-600 text-xs">PHONE</p>
+                    <p className="font-semibold text-black flex items-center">
+                      <FontAwesomeIcon icon={faPhone} className="mr-1 text-gray-600" />
+                      {customerInfo.phone}
+                    </p>
+                  </div>
                 </div>
                 <div className="border-t border-gray-300 pt-2">
                   <p className="text-gray-600 text-xs mb-1">SHIPPING ADDRESS</p>
@@ -717,12 +906,12 @@ const OrderCard = ({
                     <>
                       <p className="text-black">{order.address.street}</p>
                       <p className="text-black">{order.address.city}, {order.address.state}</p>
-                      <p className="text-black">{order.address.zipcode}</p>
-                      {order.address.phone && (
-                        <p className="text-black flex items-center mt-1">
-                          <FontAwesomeIcon icon={faPhone} className="mr-1 text-gray-600" />
-                          {order.address.phone}
-                        </p>
+                      <p className="text-black">{order.address.zipCODe}</p>
+                      {order.address.instructions && (
+                        <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                          <p className="text-xs font-medium text-yellow-800 mb-1">Delivery Instructions:</p>
+                          <p className="text-xs text-yellow-700">{order.address.instructions}</p>
+                        </div>
                       )}
                     </>
                   ) : (
@@ -735,9 +924,8 @@ const OrderCard = ({
             {/* Billing Summary */}
             <BillingSummary order={order} />
 
-            {order.paymentStatus === 'verified' && 
-             order.status !== 'Cancelled' && 
-             order.status !== 'Delivered' && (
+            {/* Status Update - Always available for COD, only for verified online payments */}
+            {canUpdateStatus && (
               <div>
                 <h5 className="text-lg font-semibold text-black mb-2">Update Status</h5>
                 <select
@@ -897,20 +1085,22 @@ const getCustomerInfo = (order) => {
   };
 };
 
-const calculateTabCounts = (orders) => {
-  return TABS.map(tab => {
+const calculateFilterCounts = (orders) => {
+  return FILTER_OPTIONS.map(filter => {
     let count = 0;
-    switch (tab.id) {
+    switch (filter.id) {
       case 'all':
         count = orders.length;
         break;
       case 'pending_verification':
-        count = orders.filter(order => order.paymentStatus === 'pending').length;
+        count = orders.filter(order => 
+          order.paymentMethod !== 'COD' && order.paymentStatus === 'pending'
+        ).length;
         break;
       case 'pending':
         count = orders.filter(order =>
           (order.status === 'Order Placed' || order.status === 'Pending') && 
-          order.paymentStatus === 'verified'
+          (order.paymentMethod === 'COD' || order.paymentStatus === 'verified')
         ).length;
         break;
       case 'packing':
@@ -930,10 +1120,16 @@ const calculateTabCounts = (orders) => {
           order.status === 'Cancelled' || order.paymentStatus === 'rejected'
         ).length;
         break;
+      case 'COD':
+        count = orders.filter(order => order.paymentMethod === 'COD').length;
+        break;
+      case 'online':
+        count = orders.filter(order => order.paymentMethod !== 'COD' && order.paymentMethod !== undefined).length;
+        break;
       default:
         count = 0;
     }
-    return { ...tab, count };
+    return { ...filter, count };
   });
 };
 
@@ -944,13 +1140,13 @@ const Orders = () => {
   
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [expandedDeals, setExpandedDeals] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
 
-  const filteredOrders = useOrdersFilter(orders, activeTab, searchTerm, sortBy);
-  const tabsWithCounts = useMemo(() => calculateTabCounts(orders), [orders]);
+  const filteredOrders = useOrdersFilter(orders, activeFilter, searchTerm, sortBy);
+  const filtersWithCounts = useMemo(() => calculateFilterCounts(orders), [orders]);
 
   const handleUnauthorized = useCallback((endpoint) => {
     console.error(`Unauthorized while calling ${endpoint}`);
@@ -1030,8 +1226,8 @@ const Orders = () => {
     ));
   }, []);
 
-  const handleTabChange = useCallback((tabId) => {
-    setActiveTab(tabId);
+  const handleFilterChange = useCallback((filterId) => {
+    setActiveFilter(filterId);
   }, []);
 
   const toggleDealExpansion = useCallback((orderId, dealName) => {
@@ -1060,7 +1256,21 @@ const Orders = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-black mb-2">Order Management</h1>
-              <p className="text-gray-600">Manage and track all customer orders</p>
+              <p className="text-gray-600">Manage and track all customer orders (COD & Online)</p>
+            </div>
+            <div className="flex items-center space-x-2 text-sm">
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                <span className="text-gray-600">COD Orders </span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                <span className="text-gray-600">Verified Online Orders</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+                <span className="text-gray-600">Pending Verification</span>
+              </div>
             </div>
           </div>
 
@@ -1069,18 +1279,15 @@ const Orders = () => {
             onSearchChange={setSearchTerm}
             sortBy={sortBy}
             onSortChange={setSortBy}
+            activeFilter={activeFilter}
+            onFilterChange={handleFilterChange}
+            filterOptions={filtersWithCounts}
           />
         </div>
 
-        <TabsNavigation
-          tabs={tabsWithCounts}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-
         {filteredOrders.length === 0 ? (
           <EmptyState
-            activeTab={activeTab}
+            activeFilter={activeFilter}
             searchTerm={searchTerm}
             onClearSearch={() => setSearchTerm('')}
           />

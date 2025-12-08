@@ -1,11 +1,23 @@
-import { useContext, useCallback, useMemo } from "react";
+import { useContext, useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import { FaStar, FaStarHalf, FaRegStar, FaArrowRight } from 'react-icons/fa';
 
-const ProductItem = ({ id, image, name, price, discount, rating, status = 'published' }) => {
+const ProductItem = ({ 
+  id, 
+  image, 
+  name, 
+  price, 
+  discount, 
+  rating, 
+  status = 'published',
+  secondImage // Add secondImage prop for hover effect
+}) => {
   const { currency } = useContext(ShopContext);
   const navigate = useNavigate();
+  const [isHovered, setIsHovered] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState({ first: false, second: false });
+  const secondImageRef = useRef(null);
 
   // Don't render if product is not published
   if (status !== 'published') {
@@ -20,8 +32,9 @@ const ProductItem = ({ id, image, name, price, discount, rating, status = 'publi
   // Memoized rating calculation
   const renderRating = useCallback((ratingValue = 0) => {
     const stars = [];
-    const fullStars = Math.floor(ratingValue);
-    const hasHalfStar = ratingValue % 1 >= 0.5;
+    const numericRating = Number(ratingValue) || 0;
+    const fullStars = Math.floor(numericRating);
+    const hasHalfStar = numericRating % 1 >= 0.5;
 
     for (let i = 1; i <= 5; i++) {
       if (i <= fullStars) {
@@ -48,41 +61,56 @@ const ProductItem = ({ id, image, name, price, discount, rating, status = 'publi
   }, []);
 
   // Memoized price calculations
-  const { actualPrice, discountPercentage, showDiscount } = useMemo(() => {
+  const { actualPrice, discountPercentage, showDiscount, savingsAmount } = useMemo(() => {
     const actualPrice = discount ? discount : price;
     const discountPercentage = discount ? Math.round(((price - discount) / price) * 100) : 0;
     const showDiscount = discount && discountPercentage > 0;
+    const savingsAmount = showDiscount ? price - discount : 0;
     
-    return { actualPrice, discountPercentage, showDiscount };
+    return { actualPrice, discountPercentage, showDiscount, savingsAmount };
   }, [price, discount]);
 
-  // Memoized rating display
-  const ratingDisplay = useMemo(() => {
-    if (rating <= 0) return null;
-    
-    return (
-      <div className="flex items-center gap-1 mb-3">
-        {renderRating(rating)}
-        <span className="text-xs text-gray-500 ml-1">({rating.toFixed(1)})</span>
-      </div>
-    );
-  }, [rating, renderRating]);
+  // Memoized normalized rating
+  const normalizedRating = useMemo(() => {
+    const numRating = Number(rating) || 0;
+    if (numRating < 0) return 0;
+    if (numRating > 5) return 5;
+    return numRating;
+  }, [rating]);
 
-  // Memoized discount badge
-  const discountBadge = useMemo(() => {
-    if (!showDiscount) return null;
-    
-    return (
-      <div className="absolute top-3 right-3 bg-black text-white px-2 py-1 rounded-full text-xs font-bold z-10">
-        {discountPercentage}% OFF
-      </div>
-    );
-  }, [showDiscount, discountPercentage]);
+  const handleImageError = useCallback((e) => {
+    e.target.src = "/images/fallback-image.jpg";
+  }, []);
+
+  // Handle image loading
+  const handleFirstImageLoad = useCallback(() => {
+    setImagesLoaded(prev => ({ ...prev, first: true }));
+  }, []);
+
+  const handleSecondImageLoad = useCallback(() => {
+    setImagesLoaded(prev => ({ ...prev, second: true }));
+  }, []);
+
+  // Preload second image on component mount
+  useEffect(() => {
+    if (secondImage && secondImage !== image) {
+      const img = new Image();
+      img.src = secondImage;
+      img.onload = handleSecondImageLoad;
+      img.onerror = () => {
+        console.log("Failed to preload second image");
+      };
+    }
+  }, [secondImage, image, handleSecondImageLoad]);
+
+  // Check if second image is available and different from main image
+  const hasSecondImage = secondImage && secondImage !== image;
+  const bothImagesLoaded = imagesLoaded.first && (hasSecondImage ? imagesLoaded.second : true);
 
   return (
     <div 
       onClick={handleClick} 
-      className="cursor-pointer bg-white rounded-2xl border border-black/50 p-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col h-[420px] w-full max-w-[320px] mx-auto group"
+      className="cursor-pointer relative rounded-2xl overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 w-full max-w-[320px] mx-auto h-[420px]"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -92,55 +120,120 @@ const ProductItem = ({ id, image, name, price, discount, rating, status = 'publi
         }
       }}
       aria-label={`View ${name} product details`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocus={() => setIsHovered(true)}
+      onBlur={() => setIsHovered(false)}
     >
-      {/* Image Section */}
-      <div className="relative overflow-hidden rounded-xl mb-4 flex-shrink-0">
-        {discountBadge}
-        <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden group-hover:shadow-md transition-shadow duration-300">
+      {/* Background Images with smooth crossfade */}
+      <div className="absolute inset-0">
+        {/* First Image - Always visible, fades out on hover */}
+        <div 
+          className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
+            isHovered && hasSecondImage ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
           <img
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            ref={secondImageRef}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             src={image}
             alt={name}
+            onError={handleImageError}
+            onLoad={handleFirstImageLoad}
             loading="lazy"
-            width={280}
-            height={280}
             decoding="async"
           />
         </div>
+        
+        {/* Second Image - Fades in on hover */}
+        {hasSecondImage && (
+          <div 
+            className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
+              isHovered ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <img
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              src={secondImage}
+              alt={`${name} alternative view`}
+              onError={handleImageError}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        )}
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
       </div>
-      
-      {/* Content Section */}
-      <div className="flex flex-col flex-1">
-        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-base leading-tight flex-1 group-hover:text-gray-700 transition-colors">
-          {name}
-        </h3>
-        
-        {ratingDisplay}
-        
-        <div className="flex items-center justify-between mt-auto pt-2">
-          <div className="flex flex-col gap-1">
+
+      {/* Loading overlay */}
+      {!bothImagesLoaded && (
+        <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
+          <div className="text-gray-400">Loading...</div>
+        </div>
+      )}
+
+      {/* Discount Badge */}
+      {showDiscount && (
+        <div className="absolute top-3 right-3 rounded-full bg-white text-black px-3 py-1 text-xs font-medium z-10">
+          {discountPercentage}% OFF
+        </div>
+      )}
+
+   
+
+      {/* Content Overlay */}
+      <div className="relative z-10 h-full flex flex-col justify-end p-6 text-white">
+        {/* Content */}
+        <div className="space-y-3">
+          {/* Title */}
+          <h3 className="font-bold text-lg leading-tight">
+            {name}
+          </h3>
+
+          {/* Rating */}
+          {normalizedRating > 0 && (
+            <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
+                {renderRating(normalizedRating)}
+              </div>
+              <span className="text-xs text-gray-300 ml-1">({normalizedRating.toFixed(1)})</span>
+            </div>
+          )}
+
+          {/* Price Section */}
+          <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2">
-              <p className="text-lg font-bold text-gray-900">
-                {currency} {actualPrice}
+              <p className="text-xl font-bold text-white">
+                {currency} {actualPrice.toFixed(2)}
               </p>
               {showDiscount && (
-                <p className="text-sm text-gray-500 line-through">
-                  {currency} {price}
+                <p className="text-sm text-gray-300 line-through">
+                  {currency} {price.toFixed(2)}
                 </p>
               )}
             </div>
+            
+            {/* Right Arrow Button */}
+            <div 
+              className="w-9 h-9 bg-white hover:bg-gray-100 rounded-full flex items-center justify-center transition-colors duration-200 flex-shrink-0"
+              aria-hidden="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClick();
+              }}
+            >
+              <FaArrowRight size={16} className="text-black" />
+            </div>
           </div>
-          
-          <button 
-            className="w-9 h-9 bg-black rounded-full flex items-center justify-center transition-all duration-300 group-hover:bg-black group-hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 flex-shrink-0"
-            aria-label="View product details"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClick();
-            }}
-          >
-            <FaArrowRight size={14} className="text-white transition-transform group-hover:translate-x-0.5" />
-          </button>
+
+          {/* Savings Info */}
+          {showDiscount && (
+            <div className="text-sm text-green-300 font-medium">
+              Save {currency} {savingsAmount.toFixed(2)}
+            </div>
+          )}
         </div>
       </div>
     </div>

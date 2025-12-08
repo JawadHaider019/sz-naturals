@@ -1,9 +1,9 @@
 import express from "express"
 import { 
   placeOrder, 
-  placeOrderWithPayment, // 🆕 NEW
-  verifyPayment, // 🆕 NEW
-  getPendingPaymentOrders, // 🆕 NEW
+  placeOrderWithPayment, 
+  verifyPayment, 
+  getPendingPaymentOrders, 
   allOrders, 
   userOrders, 
   updateStatus, 
@@ -18,7 +18,7 @@ import {
 } from "../controllers/orderController.js"
 import { authUser } from "../middleware/auth.js"
 import adminAuth from "../middleware/adminAuth.js"
-import upload from "../middleware/multer.js" // 🆕 Make sure you have file upload middleware
+import upload from "../middleware/multer.js"
 
 const orderRoutes = express.Router()
 
@@ -26,13 +26,13 @@ const orderRoutes = express.Router()
 orderRoutes.get("/list", adminAuth, allOrders)
 orderRoutes.post("/status", adminAuth, updateStatus)
 
-// 🆕 PAYMENT VERIFICATION ROUTES (Admin)
-orderRoutes.get("/pending-payments", adminAuth, getPendingPaymentOrders) // Get orders with pending payments
-orderRoutes.post("/verify-payment", adminAuth, verifyPayment) // Verify/reject payment
+// Payment verification routes (Admin)
+orderRoutes.get("/pending-payments", adminAuth, getPendingPaymentOrders)
+orderRoutes.post("/verify-payment", adminAuth, verifyPayment)
 
-// Payment routes
-orderRoutes.post("/place", authUser, placeOrder)
-orderRoutes.post("/place-with-payment", authUser, upload.single('payment_screenshot'), placeOrderWithPayment)
+// Order placement routes
+orderRoutes.post("/place-order", authUser, placeOrder) // For COD orders
+orderRoutes.post("/place-order-with-payment", authUser, upload.single('payment_screenshot'), placeOrderWithPayment) // For online payments
 
 // User orders
 orderRoutes.post("/userorders", authUser, userOrders)
@@ -45,7 +45,7 @@ orderRoutes.get("/cancellation-reasons", getCancellationReasons)
 // Stock check
 orderRoutes.post("/check-stock", authUser, checkStock)
 
-// 🆕 NOTIFICATION ROUTES
+// Notification routes
 orderRoutes.get("/notifications", authUser, getUserNotifications)
 orderRoutes.get("/admin/notifications", adminAuth, getAdminNotifications)
 orderRoutes.post("/notifications/mark-read", authUser, markNotificationAsRead)

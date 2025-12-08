@@ -15,7 +15,14 @@ export const getDashboardStats = async (req, res) => {
 
     // Fetch all data
     const allProducts = await Product.find({});
-    const allOrders = await Order.find({ date: { $gte: startTimestamp, $lte: endTimestamp } });
+    
+    // 🔴 CRITICAL FIX: Filter out cancelled and rejected orders
+    const allOrders = await Order.find({ 
+      date: { $gte: startTimestamp, $lte: endTimestamp },
+      status: { $nin: ['Cancelled', 'Payment Rejected'] }, // Exclude cancelled/rejected orders
+      paymentStatus: { $ne: 'rejected' } // Also exclude payment rejected
+    });
+    
     const allUsers = await User.find({});
     const allDeals = await Deal.find({});
 
@@ -33,7 +40,7 @@ export const getDashboardStats = async (req, res) => {
     let dealsSold = 0;
     let productsSold = 0;
 
-    // Calculate metrics from actual order data
+    // Calculate metrics from actual order data (already filtered to exclude cancelled)
     for (const order of allOrders) {
       for (const item of order.items) {
         const quantity = item.quantity || 1;
@@ -105,7 +112,10 @@ export const getDashboardStats = async (req, res) => {
     }, 0);
 
     // 7️⃣ RECENT ORDERS (last 6)
-    const recentOrders = await Order.find()
+    const recentOrders = await Order.find({ 
+      status: { $nin: ['Cancelled', 'Payment Rejected'] },
+      paymentStatus: { $ne: 'rejected' }
+    })
       .sort({ date: -1 })
       .limit(6)
       .populate('userId', 'name');
@@ -223,7 +233,9 @@ export const getDashboardStats = async (req, res) => {
     const customerOrders = await Order.aggregate([
       { 
         $match: { 
-          date: { $gte: startTimestamp, $lte: endTimestamp } 
+          date: { $gte: startTimestamp, $lte: endTimestamp },
+          status: { $nin: ['Cancelled', 'Payment Rejected'] },
+          paymentStatus: { $ne: 'rejected' }
         } 
       },
       {
@@ -507,9 +519,13 @@ export const getSalesTrend = async (req, res) => {
     const endTimestamp = endDate.getTime();
 
     // Get all orders and products for accurate cost calculation
+    // 🔴 CRITICAL FIX: Exclude cancelled orders
     const allOrders = await Order.find({
-      date: { $gte: startTimestamp, $lte: endTimestamp }
+      date: { $gte: startTimestamp, $lte: endTimestamp },
+      status: { $nin: ['Cancelled', 'Payment Rejected'] },
+      paymentStatus: { $ne: 'rejected' }
     });
+    
     const allProducts = await Product.find({});
 
     const monthlyData = [];
@@ -602,8 +618,11 @@ export const getProfitTrend = async (req, res) => {
     const endTimestamp = endDate.getTime();
 
     // Get all orders and products for accurate calculation
+    // 🔴 CRITICAL FIX: Exclude cancelled orders
     const allOrders = await Order.find({
-      date: { $gte: startTimestamp, $lte: endTimestamp }
+      date: { $gte: startTimestamp, $lte: endTimestamp },
+      status: { $nin: ['Cancelled', 'Payment Rejected'] },
+      paymentStatus: { $ne: 'rejected' }
     });
     const allProducts = await Product.find({});
 
@@ -688,8 +707,11 @@ export const getProfitGrowth = async (req, res) => {
     const endTimestamp = endDate.getTime();
 
     // Get all orders and products for accurate calculation
+    // 🔴 CRITICAL FIX: Exclude cancelled orders
     const allOrders = await Order.find({
-      date: { $gte: startTimestamp, $lte: endTimestamp }
+      date: { $gte: startTimestamp, $lte: endTimestamp },
+      status: { $nin: ['Cancelled', 'Payment Rejected'] },
+      paymentStatus: { $ne: 'rejected' }
     });
     const allProducts = await Product.find({});
 
@@ -820,8 +842,11 @@ export const getYearOverYearProfitGrowth = async (req, res) => {
       const yearStart = new Date(year, 0, 1).getTime();
       const yearEnd = new Date(year, 11, 31, 23, 59, 59).getTime();
 
+      // 🔴 CRITICAL FIX: Exclude cancelled orders
       const yearlyOrders = await Order.find({
-        date: { $gte: yearStart, $lte: yearEnd }
+        date: { $gte: yearStart, $lte: yearEnd },
+        status: { $nin: ['Cancelled', 'Payment Rejected'] },
+        paymentStatus: { $ne: 'rejected' }
       });
       const allProducts = await Product.find({});
 
@@ -922,7 +947,12 @@ export const getYearOverYearProfitGrowth = async (req, res) => {
  */
 export const getMonthlyProfitGrowth = async (req, res) => {
   try {
-    const allOrders = await Order.find().sort({ date: 1 });
+    // 🔴 CRITICAL FIX: Exclude cancelled orders
+    const allOrders = await Order.find({ 
+      status: { $nin: ['Cancelled', 'Payment Rejected'] },
+      paymentStatus: { $ne: 'rejected' }
+    }).sort({ date: 1 });
+    
     const allProducts = await Product.find({});
 
     // Group orders by month
@@ -1036,9 +1066,12 @@ export const getAlerts = async (req, res) => {
     }).select("name category");
 
     const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    // 🔴 CRITICAL FIX: Exclude cancelled orders from high value alerts
     const highValueOrders = await Order.find({
       amount: { $gt: 2000 },
-      date: { $gte: oneWeekAgo }
+      date: { $gte: oneWeekAgo },
+      status: { $nin: ['Cancelled', 'Payment Rejected'] },
+      paymentStatus: { $ne: 'rejected' }
     }).select("_id amount date");
 
     const sevenDaysFromNow = new Date();
@@ -1110,8 +1143,11 @@ export const getCustomerAnalytics = async (req, res) => {
 
     const totalCustomers = await User.countDocuments();
 
+    // 🔴 CRITICAL FIX: Exclude cancelled orders from customer analytics
     const customerOrders = await Order.find({
-      date: { $gte: startTimestamp, $lte: endTimestamp }
+      date: { $gte: startTimestamp, $lte: endTimestamp },
+      status: { $nin: ['Cancelled', 'Payment Rejected'] },
+      paymentStatus: { $ne: 'rejected' }
     });
 
     const uniqueCustomers = [...new Set(customerOrders.map(order => order.userId))];

@@ -2,10 +2,8 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { IoIosArrowForward } from "react-icons/io";
-import { FaWhatsapp, FaTiktok, FaFacebookF, FaInstagram } from "react-icons/fa";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import axios from 'axios';
 import { assets } from "../assets/assets";  
 
 // Simple cache implementation
@@ -16,19 +14,12 @@ const createCache = (duration = 5 * 60 * 1000) => ({
 });
 
 const bannerCache = createCache(5 * 60 * 1000);
-const businessCache = createCache(10 * 60 * 1000);
 
 const Hero = () => {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [businessInfo, setBusinessInfo] = useState({
-    socialMedia: {
-      facebook: "",
-      instagram: "",
-      tiktok: "",
-      whatsapp: ""
-    }
-  });
+  const navigate = useNavigate();
+
   const sliderRef = useRef(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const mountedRef = useRef(true);
@@ -52,40 +43,7 @@ const Hero = () => {
       setBanners(bannerCache.data);
       setLoading(false);
     }
-    
-    // Initialize business info from cache
-    if (businessCache.data && now - businessCache.timestamp < businessCache.duration) {
-      setBusinessInfo(businessCache.data);
-    }
   }, []);
-
-  // Fetch business details
-  useEffect(() => {
-    const fetchBusinessDetails = async () => {
-      try {
-        const response = await axios.get(`${backendUrl}/api/business-details`, {
-          timeout: 5000
-        });
-        if (response.data.success && response.data.data) {
-          businessCache.data = response.data.data;
-          businessCache.timestamp = Date.now();
-          if (mountedRef.current) {
-            setBusinessInfo(response.data.data);
-          }
-        }
-      } catch (error) {
-        // Silently fail - use cached data or default values
-        console.log('Business details fetch failed, using cached data if available');
-      }
-    };
-
-    const now = Date.now();
-    if (!businessCache.data || now - businessCache.timestamp >= businessCache.duration) {
-      if (backendUrl) {
-        fetchBusinessDetails();
-      }
-    }
-  }, [backendUrl]);
 
   // Fetch banners
   const fetchBanners = useCallback(async () => {
@@ -142,85 +100,17 @@ const Hero = () => {
     }
   }, [fetchBanners]);
 
-  // Handle button click
-  const handleButtonClick = useCallback((e) => {
-    e.stopPropagation();
-  }, []);
-
   // Handle image load
   const handleImageLoad = useCallback((imageUrl) => {
     setLoadedImages(prev => new Set(prev).add(imageUrl));
   }, []);
-
-  // Social media platforms configuration
-  const socialPlatforms = useMemo(() => [
-    { key: 'whatsapp', icon: FaWhatsapp, label: 'WhatsApp' },
-    { key: 'tiktok', icon: FaTiktok, label: 'TikTok' },
-    { key: 'facebook', icon: FaFacebookF, label: 'Facebook' },
-    { key: 'instagram', icon: FaInstagram, label: 'Instagram' }
-  ], []);
-
-  // Social Media Icons Component
-  const SocialMediaIcons = useMemo(() => {
-    const Row = ({ className = "", iconSize = 20 }) => (
-      <div className={`flex items-center gap-4 ${className}`}>
-        {socialPlatforms.map((platform) => {
-          const socialUrl = businessInfo.socialMedia?.[platform.key];
-          const isActive = !!socialUrl;
-          
-          return (
-            <a
-              key={platform.key}
-              href={isActive ? socialUrl : "#"}
-              target={isActive ? "_blank" : "_self"}
-              rel={isActive ? "noopener noreferrer" : ""}
-              className={`text-white/80 hover:text-white transition-colors duration-300 transform hover:scale-110 ${
-                !isActive ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              aria-label={isActive ? `Visit our ${platform.label}` : `${platform.label} link not set`}
-              onClick={!isActive ? (e) => e.preventDefault() : undefined}
-            >
-              <platform.icon size={iconSize} />
-            </a>
-          );
-        })}
-      </div>
-    );
-
-    const Column = ({ className = "", iconSize = 20 }) => (
-      <div className={`flex flex-col items-center gap-4 ${className}`}>
-        {socialPlatforms.map((platform) => {
-          const socialUrl = businessInfo.socialMedia?.[platform.key];
-          const isActive = !!socialUrl;
-          
-          return (
-            <a
-              key={platform.key}
-              href={isActive ? socialUrl : "#"}
-              target={isActive ? "_blank" : "_self"}
-              rel={isActive ? "noopener noreferrer" : ""}
-              className={`text-white hover:text-white/90 transition-colors duration-300 transform hover:scale-110 ${
-                !isActive ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              aria-label={isActive ? `Visit our ${platform.label}` : `${platform.label} link not set`}
-              onClick={!isActive ? (e) => e.preventDefault() : undefined}
-            >
-              <platform.icon size={iconSize} />
-            </a>
-          );
-        })}
-      </div>
-    );
-
-    return { Row, Column };
-  }, [businessInfo.socialMedia, socialPlatforms]);
 
   // Custom Dots Component
   const CustomDots = () => {
     if (banners.length <= 1) return null;
 
     return (
-      <div className="absolute -bottom-10 md:-bottom-16 left-1/2 transform -translate-x-1/2 z-20">
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20">
         <div className="flex items-center gap-3">
           {banners.map((_, index) => (
             <button
@@ -230,10 +120,10 @@ const Hero = () => {
               aria-label={`Go to slide ${index + 1}`}
             >
               <div 
-                className={`transition-all duration-300 rounded-full ${
+                className={`transition-all duration-300 ${
                   index === currentSlide 
-                    ? 'bg-black w-8 h-2' 
-                    : 'bg-black/40 w-2 h-2 hover:bg-black/60'
+                    ? 'bg-white w-8 h-1' 
+                    : 'bg-white/40 w-2 h-2 hover:bg-white/60'
                 }`}
               />
             </button>
@@ -252,7 +142,7 @@ const Hero = () => {
     slidesToScroll: 1,
     autoplay: banners.length > 1,
     autoplaySpeed: 6000,
-    pauseOnHover: false,
+    pauseOnHover: true, // Changed to true for better UX
     arrows: false,
     fade: true,
     lazyLoad: 'progressive',
@@ -275,85 +165,116 @@ const Hero = () => {
       }`}
       loading={index === 0 ? "eager" : "lazy"}
       decoding="async"
-     width={1920}
-        height={1080}
+      width={1920}
+      height={1080}
       onLoad={() => handleImageLoad(banner.imageUrl)}
       onError={() => handleImageLoad(banner.imageUrl)}
     />
   ), [loadedImages, handleImageLoad]);
 
+const handleButtonClick = useCallback((e, url) => {
+  console.log('Button clicked!', { url, eventType: e.type });
+  
+  e.preventDefault();
+  e.stopPropagation();
+  e.nativeEvent.stopImmediatePropagation();
+  
+  console.log('Navigation starting...');
+  
+  setTimeout(() => {
+    if (url.startsWith('http')) {
+      console.log('Opening external URL:', url);
+      window.open(url, '_blank');
+    } else {
+      console.log('Navigating to internal route:', url);
+      navigate(url);
+    }
+  }, 10);
+}, [navigate]);
+
   // Banner Item Component
-  const BannerItem = useCallback(({ banner, index }) => (
-    <section className="relative w-full h-full">
-      {/* Background Image Container */}
-      <div className="w-full h-[100vh] md:h-screen rounded-3xl md:rounded-4xl mx-auto overflow-hidden">
-        <BannerImage banner={banner} index={index} />
-        
-        {/* Loading placeholder */}
-        {!loadedImages.has(banner.imageUrl) && (
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 animate-pulse" />
-        )}
-      </div>
-
-      {/* Overlays */}
-      <div className="absolute inset-0 bg-black/30 z-2 rounded-3xl md:rounded-4xl"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/30 z-3 rounded-3xl md:rounded-4xl"></div>
-
-      {/* Content */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center">
-        <div className="text-center px-4 md:px-6 max-w-7xl md:max-w-8xl">
-          {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-white uppercase mb-4 md:mb-6">
-            {banner.headingLine1}
-            {banner.headingLine2 && (
-              <> <span className="font-bold">{banner.headingLine2}</span></>
-            )}
-          </h1>
-        
-          {/* Subtext */}
-          {banner.subtext && (
-            <p className="text-base sm:text-lg md:text-xl text-white/90 font-light max-w-xs sm:max-w-sm md:max-w-2xl mx-auto leading-relaxed mb-6 md:mb-10 px-2">
-              {banner.subtext}
-            </p>
+  const BannerItem = useCallback(({ banner, index }) => {
+    // Determine if URL is external
+    const isExternalUrl = banner.redirectUrl?.startsWith('http');
+    
+    return (
+      <section className="relative w-full h-full">
+        {/* Background Image Container - Removed rounded corners */}
+        <div className="w-full h-[100vh] md:h-screen overflow-hidden">
+          <BannerImage banner={banner} index={index} />
+          
+          {/* Loading placeholder */}
+          {!loadedImages.has(banner.imageUrl) && (
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 animate-pulse" />
           )}
+        </div>
 
-          {/* CTA Button */}
-          {banner.buttonText && banner.redirectUrl && (
-            <div className="relative z-30">
-              <Link
-                to={banner.redirectUrl}
-                onClick={handleButtonClick}
-                className="inline-flex items-center gap-2 md:gap-3 px-6 md:px-8 py-3 md:py-4 text-white border border-white/50 rounded-full transition-all duration-300 hover:bg-white/10 hover:border-white/80 group"
-                aria-label={banner.buttonText}
-              >
-                <span className="text-xs md:text-sm font-medium tracking-wider uppercase">
-                  {banner.buttonText}
-                </span>
-                <IoIosArrowForward size={14} className="transition-transform group-hover:translate-x-1" />
-              </Link>
+        {/* Overlays - Removed rounded corners */}
+        <div className="absolute inset-0 bg-black/30 z-2"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-black/10 z-3"></div>
+
+        {/* Content - Aligned to right side */}
+        <div className="absolute inset-0 z-10 flex items-center">
+          <div className="w-full px-4 md:px-8 lg:px-16">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex justify-start">
+                <div className="text-left max-w-2xl">
+                  {/* Headline */}
+                  <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-white uppercase mb-4 md:mb-6">
+                    {banner.headingLine1}
+                    {banner.headingLine2 && (
+                      <> <span className="font-bold block">{banner.headingLine2}</span></>
+                    )}
+                  </h1>
+                
+                  {/* Subtext */}
+                  {banner.subtext && (
+                    <p className="text-lg md:text-xl lg:text-2xl text-white/90 font-light leading-relaxed mb-8 md:mb-12 ml-auto max-w-lg">
+                      {banner.subtext}
+                    </p>
+                  )}
+
+                  {/* CTA Button - WORKING SOLUTION */}
+                  {banner.buttonText && banner.redirectUrl && (
+                    <div className="relative z-30">
+                      {isExternalUrl ? (
+                        // External URL - use anchor tag
+                        <a
+                          href={banner.redirectUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => handleButtonClick(e, banner.redirectUrl)}
+                          className="inline-flex items-center gap-3 px-8 md:px-10 py-3 md:py-4 text-white border border-white/50 transition-all duration-300 hover:bg-white/10 hover:border-white/80 group ml-auto cursor-pointer"
+                          aria-label={banner.buttonText}
+                        >
+                          <span className="text-sm md:text-base font-medium tracking-wider uppercase">
+                            {banner.buttonText}
+                          </span>
+                          <IoIosArrowForward size={18} className="transition-transform group-hover:translate-x-2" />
+                        </a>
+                      ) : (
+                        // Internal URL - use button with programmatic navigation
+                        <button
+                          onClick={(e) => handleButtonClick(e, banner.redirectUrl)}
+                          className="inline-flex items-center gap-3 px-8 md:px-10 py-3 md:py-4 text-white border border-white/50 transition-all duration-300 hover:bg-white/10 hover:border-white/80 group ml-auto cursor-pointer"
+                          aria-label={banner.buttonText}
+                        >
+                          <span className="text-sm md:text-base font-medium tracking-wider uppercase">
+                            {banner.buttonText}
+                          </span>
+                          <IoIosArrowForward size={18} className="transition-transform group-hover:translate-x-2" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
-
-          {/* Mobile Social Media */}
-          <div className="mt-6 md:mt-8 md:hidden flex justify-center">
-            <SocialMediaIcons.Row iconSize={20} />
           </div>
         </div>
-      </div>
-
-      {/* Desktop Social Media */}
-      <div className="absolute bottom-4 md:bottom-8 left-4 md:left-12 z-10 hidden md:flex flex-col gap-3 md:gap-4">
-        <SocialMediaIcons.Column iconSize={18} />
-      </div>
-
-      {/* Slide Counter */}
-      <div className="absolute bottom-4 md:bottom-8 right-4 md:right-12 z-10">
-        <div className="text-white/80 text-sm md:text-lg font-light tracking-wide">
-          {(index + 1).toString().padStart(2, '0')} / {banners.length.toString().padStart(2, '0')}
-        </div>
-      </div>
-    </section>
-  ), [handleButtonClick, SocialMediaIcons, BannerImage, loadedImages]);
+      </section>
+    );
+  }, [BannerImage, loadedImages, handleButtonClick]);
 
   // Fallback banner content when no banners are available
   const fallbackBanners = useMemo(() => [{
@@ -371,7 +292,7 @@ const Hero = () => {
     const bannersToShow = banners.length > 0 ? banners : fallbackBanners;
 
     return (
-      <div className="transform -translate-y-9 md:-translate-y-[2.7rem] relative">
+      <div className="relative">
         <Slider ref={sliderRef} {...settings}>
           {bannersToShow.map((banner, index) => (
             <div key={banner._id || `banner-${index}`} className="px-0 mx-0">
@@ -387,16 +308,22 @@ const Hero = () => {
   // Loading state
   if (loading) {
     return (
-      <section className="relative w-full h-[100vh] md:h-screen transform -translate-y-9 md:-translate-y-[2.7rem]">
-        <div className="absolute inset-0 flex items-center justify-center px-4">
-          <div className="w-full h-[100vh] md:h-screen rounded-3xl md:rounded-4xl bg-gradient-to-br from-gray-800 to-gray-900 animate-pulse overflow-hidden">
-            <div className="absolute inset-0 bg-black/40 z-2 rounded-3xl md:rounded-4xl"></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/30 z-3 rounded-3xl md:rounded-4xl"></div>
+      <section className="relative w-full h-[100vh] md:h-screen">
+        <div className="absolute inset-0">
+          <div className="w-full h-[100vh] md:h-screen bg-gradient-to-br from-gray-800 to-gray-900 animate-pulse overflow-hidden">
+            <div className="absolute inset-0 bg-black/40 z-2"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-black/10 z-3"></div>
             
-            <div className="absolute inset-0 z-10 flex items-center justify-center">
-              <div className="text-center px-4 md:px-6 max-w-7xl md:max-w-8xl">
-                <div className="h-16 md:h-20 bg-white/10 animate-pulse rounded-full mb-4 md:mb-6 w-64 md:w-96 mx-auto"></div>
-                <div className="h-10 md:h-12 bg-white/10 animate-pulse rounded-full w-32 md:w-40 mx-auto mt-6 md:mt-10"></div>
+            <div className="absolute inset-0 z-10 flex items-center">
+              <div className="w-full px-4 md:px-8 lg:px-16">
+                <div className="max-w-7xl mx-auto">
+                  <div className="flex justify-end">
+                    <div className="text-right max-w-2xl">
+                      <div className="h-16 md:h-20 bg-white/10 animate-pulse mb-6 w-64 md:w-96 ml-auto"></div>
+                      <div className="h-10 md:h-12 bg-white/10 animate-pulse w-48 md:w-60 ml-auto mt-10"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -405,15 +332,33 @@ const Hero = () => {
     );
   }
 
-  // Main return - always render something
+  // Main return
   return (
-    <div className="relative w-full transform -translate-y-9 md:-translate-y-[2.7rem]">
+    <div className="relative w-full">
       <style>{`
+        /* Remove all rounded corners from slick slider */
         .slick-slide > div {
-          border-radius: 1.5rem;
+          border-radius: 0;
         }
         .slick-list {
-          border-radius: 1.5rem;
+          border-radius: 0;
+        }
+        .slick-slider {
+          margin: 0;
+          padding: 0;
+        }
+        /* CRITICAL FIX for button clicks in slick slider */
+        .slick-slide * {
+          pointer-events: auto !important;
+        }
+        .slick-slide {
+          pointer-events: auto !important;
+        }
+        .slick-slide button, 
+        .slick-slide a {
+          pointer-events: auto !important;
+          z-index: 9999 !important;
+          position: relative !important;
         }
       `}</style>
       
