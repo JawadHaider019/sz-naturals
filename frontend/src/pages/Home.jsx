@@ -11,14 +11,13 @@ const Home = () => {
     <div>
 
       <Helmet>
-        <title>Pure Clay - Pakistan's No. 1 Organic Foods Brand | Natural Products</title>
-        <meta 
-          name="description" 
-          content="Pakistan's leading organic brand - Pure Clay offers premium olive oil, peanuts, dates & natural foods. Trusted quality, 100% pure products across Pakistan." 
-        />
-        <meta name="keywords" content="Pakistan organic brand, Pakistani olive oil, organic foods Pakistan, natural products Pakistan, No. 1 organic brand, Pakistani dates, local nuts Pakistan" />
-      </Helmet>
-
+  <title>SZ Naturals - Where Ancient Herbal Wisdom meets Modern Hair Excellence</title>
+  <meta 
+    name="description" 
+    content="SZ Naturals - Where Ancient Herbal Wisdom meets Modern Hair Excellence. Pure, handmade natural hair care products crafted with organic ingredients like Amla, Shikakai, Bhringraj, and Neem for complete hair wellness." 
+  />
+  <meta name="keywords" content="natural hair care, herbal hair products, organic hair care, Amla hair oil, Shikakai shampoo, Bhringraj hair treatment, neem hair care, handmade hair products, Pakistan natural products" />
+</Helmet>
       <Hero/>
       <DealCollection />
       <LatestCollection/>
