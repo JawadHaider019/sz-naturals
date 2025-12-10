@@ -29,6 +29,9 @@ import locationRoutes from './routes/locationsRoutes.js';
 const app = express();
 const port = process.env.PORT || 4000;
 dotenv.config();
+
+app.set('trust proxy', 1);
+
 connectDB();
 connectCloudinary();
 
