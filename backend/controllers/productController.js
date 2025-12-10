@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import productModel from '../models/productModel.js';
-import { notifyNewProduct } from '../controllers/newsletterController.js'; // ADDED IMPORT
+import { notifyNewProduct } from '../controllers/newsletterController.js';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -12,7 +12,22 @@ cloudinary.config({
 // ------------------- ADD PRODUCT -------------------
 const addProduct = async (req, res) => {
   try {
-    const { name, description, cost, price, discountprice, quantity, category, subcategory, bestseller, status } = req.body;
+    const { 
+      name, 
+      description, 
+      cost, 
+      price, 
+      discountprice, 
+      quantity, 
+      category, 
+      subcategory, 
+      bestseller, 
+      status,
+      // New optional fields
+      ingredients,
+      howToUse,
+      benefits
+    } = req.body;
 
     const imagesFiles = ['image1', 'image2', 'image3', 'image4']
       .map(key => req.files[key]?.[0])
@@ -24,6 +39,32 @@ const addProduct = async (req, res) => {
         return result.secure_url;
       })
     );
+
+    // Parse array fields if they're strings (from form data)
+    let parsedIngredients = [];
+    let parsedBenefits = [];
+    
+    try {
+      if (ingredients) {
+        parsedIngredients = typeof ingredients === 'string' 
+          ? JSON.parse(ingredients) 
+          : ingredients;
+      }
+    } catch (e) {
+      console.error('Error parsing ingredients:', e);
+      parsedIngredients = ingredients ? [ingredients] : [];
+    }
+    
+    try {
+      if (benefits) {
+        parsedBenefits = typeof benefits === 'string' 
+          ? JSON.parse(benefits) 
+          : benefits;
+      }
+    } catch (e) {
+      console.error('Error parsing benefits:', e);
+      parsedBenefits = benefits ? [benefits] : [];
+    }
 
     const productData = {
       name,
@@ -38,6 +79,10 @@ const addProduct = async (req, res) => {
       image: imagesUrl,
       status: status || 'draft',
       date: Date.now(),
+      // New optional fields
+      ingredients: parsedIngredients,
+      howToUse: howToUse || '',
+      benefits: parsedBenefits
     };
 
     const product = new productModel(productData);
@@ -54,15 +99,21 @@ const addProduct = async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: 'Product added successfully', product });
+    res.json({ 
+      success: true, 
+      message: 'Product added successfully', 
+      product 
+    });
   } catch (error) {
     console.error("Add Product Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
 // ------------------- LIST PRODUCTS -------------------
-
 const listProducts = async (req, res) => {
   try {
     const { status = 'all' } = req.query; // Default to 'all'
@@ -99,14 +150,21 @@ const listProducts = async (req, res) => {
     });
   }
 };
+
 // ------------------- REMOVE PRODUCT -------------------
 const removeProduct = async (req, res) => {
   try {
     await productModel.findByIdAndDelete(req.body.id);
-    res.json({ success: true, message: "Product removed successfully" });
+    res.json({ 
+      success: true, 
+      message: "Product removed successfully" 
+    });
   } catch (error) {
     console.error("Remove Product Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
@@ -115,18 +173,39 @@ const singleProduct = async (req, res) => {
   try {
     const { productId } = req.body;
     const product = await productModel.findById(productId);
-    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
-    res.json({ success: true, product });
+    
+    if (!product) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Product not found" 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      product 
+    });
   } catch (error) {
     console.error("Single Product Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
 // ------------------- UPDATE PRODUCT -------------------
 const updateProduct = async (req, res) => {
   try {
-    const fields = ['id', 'name', 'description', 'cost', 'price', 'discountprice', 'quantity', 'category', 'subcategory', 'bestseller', 'status', 'removedImages'];
+    // Log all fields for debugging
+    const fields = [
+      'id', 'name', 'description', 'cost', 'price', 'discountprice', 
+      'quantity', 'category', 'subcategory', 'bestseller', 'status', 
+      'removedImages',
+      // New fields
+      'ingredients', 'howToUse', 'benefits'
+    ];
+    
     fields.forEach(field => {
       console.log(`${field}:`, req.body[field]);
     });
@@ -143,34 +222,74 @@ const updateProduct = async (req, res) => {
       subcategory,
       bestseller,
       status,
-      removedImages
+      removedImages,
+      // New optional fields
+      ingredients,
+      howToUse,
+      benefits
     } = req.body;
 
     if (!id) {
       console.log("ERROR: No product ID provided");
-      return res.status(400).json({ success: false, message: "Product ID is required" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Product ID is required" 
+      });
     }
 
     const existingProduct = await productModel.findById(id);
     if (!existingProduct) {
       console.log("ERROR: Product not found with ID:", id);
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Product not found" 
+      });
     }
 
     console.log("Existing product status:", existingProduct.status);
 
-    // Base update data - ensure status is properly handled
+    // Parse array fields if they're strings (from form data)
+    let parsedIngredients = existingProduct.ingredients;
+    let parsedBenefits = existingProduct.benefits;
+    
+    if (ingredients !== undefined) {
+      try {
+        parsedIngredients = typeof ingredients === 'string' 
+          ? JSON.parse(ingredients) 
+          : ingredients;
+      } catch (e) {
+        console.error('Error parsing ingredients:', e);
+        parsedIngredients = ingredients ? [ingredients] : [];
+      }
+    }
+    
+    if (benefits !== undefined) {
+      try {
+        parsedBenefits = typeof benefits === 'string' 
+          ? JSON.parse(benefits) 
+          : benefits;
+      } catch (e) {
+        console.error('Error parsing benefits:', e);
+        parsedBenefits = benefits ? [benefits] : [];
+      }
+    }
+
+    // Base update data
     const updateData = {
-      name: name || existingProduct.name,
-      description: description || existingProduct.description,
-      category: category || existingProduct.category,
-      subcategory: subcategory || existingProduct.subcategory,
-      cost: Number(cost) || existingProduct.cost,
-      price: Number(price) || existingProduct.price,
-      discountprice: Number(discountprice) || existingProduct.discountprice,
-      quantity: Number(quantity) || existingProduct.quantity,
-      bestseller: bestseller === 'true' || bestseller === true,
-      status: status || existingProduct.status // Use received status or keep existing
+      name: name !== undefined ? name : existingProduct.name,
+      description: description !== undefined ? description : existingProduct.description,
+      category: category !== undefined ? category : existingProduct.category,
+      subcategory: subcategory !== undefined ? subcategory : existingProduct.subcategory,
+      cost: cost !== undefined ? Number(cost) : existingProduct.cost,
+      price: price !== undefined ? Number(price) : existingProduct.price,
+      discountprice: discountprice !== undefined ? Number(discountprice) : existingProduct.discountprice,
+      quantity: quantity !== undefined ? Number(quantity) : existingProduct.quantity,
+      bestseller: bestseller !== undefined ? (bestseller === 'true' || bestseller === true) : existingProduct.bestseller,
+      status: status !== undefined ? status : existingProduct.status,
+      // Handle new optional fields
+      ingredients: parsedIngredients,
+      howToUse: howToUse !== undefined ? howToUse : existingProduct.howToUse,
+      benefits: parsedBenefits
     };
 
     console.log("=== UPDATE DATA TO BE SAVED ===");
@@ -183,7 +302,9 @@ const updateProduct = async (req, res) => {
     // Handle removed images
     let removedImageUrls = [];
     try {
-      removedImageUrls = typeof removedImages === "string" ? JSON.parse(removedImages) : removedImages || [];
+      removedImageUrls = typeof removedImages === "string" 
+        ? JSON.parse(removedImages) 
+        : removedImages || [];
       console.log("Removed images:", removedImageUrls);
     } catch (e) {
       console.error("Error parsing removedImages:", e);
@@ -191,14 +312,19 @@ const updateProduct = async (req, res) => {
 
     if (removedImageUrls.length > 0) {
       const normalizeUrl = url => url.replace(/^https?:/, "").trim();
-      finalImages = finalImages.filter(img => !removedImageUrls.some(removed => normalizeUrl(removed) === normalizeUrl(img)));
+      finalImages = finalImages.filter(img => 
+        !removedImageUrls.some(removed => normalizeUrl(removed) === normalizeUrl(img))
+      );
 
       // Delete removed images from Cloudinary
       for (const imgUrl of removedImageUrls) {
         try {
           const match = imgUrl.match(/upload\/(?:v\d+\/)?(.+)\.\w+$/);
           const publicId = match ? match[1] : null;
-          if (publicId) await cloudinary.uploader.destroy(publicId);
+          if (publicId) {
+            await cloudinary.uploader.destroy(publicId);
+            console.log(`Deleted image from Cloudinary: ${publicId}`);
+          }
         } catch (err) {
           console.error("Cloudinary deletion error:", err);
         }
@@ -216,9 +342,15 @@ const updateProduct = async (req, res) => {
 
       if (newImages.length > 0) {
         const newImageUrls = await Promise.all(
-          newImages.map(file => cloudinary.uploader.upload(file.path, { resource_type: "image", folder: "products" }).then(res => res.secure_url))
+          newImages.map(file => 
+            cloudinary.uploader.upload(file.path, { 
+              resource_type: "image", 
+              folder: "products" 
+            }).then(res => res.secure_url)
+          )
         );
         finalImages = [...finalImages, ...newImageUrls];
+        console.log(`Added ${newImageUrls.length} new images`);
       }
     }
 
@@ -250,7 +382,10 @@ const updateProduct = async (req, res) => {
 
   } catch (error) {
     console.error("Update Product Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
@@ -258,15 +393,35 @@ const updateProduct = async (req, res) => {
 const updateProductStatus = async (req, res) => {
   try {
     const { id, status } = req.body;
-    if (!id || !status) return res.status(400).json({ success: false, message: "Product ID and status are required" });
+    
+    if (!id || !status) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Product ID and status are required" 
+      });
+    }
 
     const validStatuses = ['draft', 'published', 'archived', 'scheduled'];
-    if (!validStatuses.includes(status)) return res.status(400).json({ success: false, message: `Invalid status. Must be: ${validStatuses.join(', ')}` });
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status. Must be: ${validStatuses.join(', ')}` 
+      });
+    }
 
     const existingProduct = await productModel.findById(id);
-    if (!existingProduct) return res.status(404).json({ success: false, message: "Product not found" });
+    if (!existingProduct) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Product not found" 
+      });
+    }
 
-    const updatedProduct = await productModel.findByIdAndUpdate(id, { status }, { new: true });
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      id, 
+      { status }, 
+      { new: true }
+    );
 
     // ✅ ADDED: Send newsletter notification when status changes to published
     if (status === 'published' && existingProduct.status !== 'published') {
@@ -279,10 +434,17 @@ const updateProductStatus = async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: "Product status updated successfully", product: updatedProduct });
+    res.json({ 
+      success: true, 
+      message: "Product status updated successfully", 
+      product: updatedProduct 
+    });
   } catch (error) {
     console.error("Update Product Status Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
@@ -291,10 +453,17 @@ const getProductsByStatus = async (req, res) => {
   try {
     const { status } = req.params;
     const products = await productModel.find({ status });
-    res.json({ success: true, products });
+    
+    res.json({ 
+      success: true, 
+      products 
+    });
   } catch (error) {
     console.error("Get Products By Status Error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 

@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { backendUrl, currency } from '../App'
 import { toast } from 'react-toastify'
-import { FaArrowLeft, FaTimes, FaInfoCircle } from 'react-icons/fa'
+import { 
+  FaArrowLeft, 
+  FaTimes, 
+  FaInfoCircle, 
+  FaFlask, 
+  FaCheckCircle,
+  FaListUl
+} from 'react-icons/fa'
 
 const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
   const [formData, setFormData] = useState({
@@ -16,7 +23,15 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
     discountprice: product.discountprice || 0,
     quantity: product.quantity || 0,
     bestseller: product.bestseller || false,
-    status: product.status || 'draft'
+    status: product.status || 'draft',
+    // New fields - converted to comma-separated strings
+    ingredients: product.ingredients && Array.isArray(product.ingredients) 
+      ? product.ingredients.join(', ') 
+      : '',
+    howToUse: product.howToUse || '',
+    benefits: product.benefits && Array.isArray(product.benefits) 
+      ? product.benefits.join(', ') 
+      : ''
   })
   
   const [loading, setLoading] = useState(false)
@@ -30,42 +45,42 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
 
   // Fetch categories from backend
   useEffect(() => {
- // Fix the fetchCategories function
-const fetchCategories = async () => {
-  try {
-    setCategoriesLoading(true)
-    const response = await axios.get(backendUrl + '/api/categories')
-    
-    console.log('Categories API Response:', response.data) // Debug log
-    
-    if (response.data && Array.isArray(response.data)) {
-      setCategories(response.data)
-      
-      // If product has a category, load its subcategories
-      if (product.category) {
-        console.log('Product category:', product.category) // Debug log
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true)
+        const response = await axios.get(backendUrl + '/api/categories')
         
-        // Try to find category by _id first, then by name if needed
-        const selectedCategory = response.data.find(cat => 
-          cat._id === product.category || cat.name === product.category
-        )
+        console.log('Categories API Response:', response.data) // Debug log
         
-        if (selectedCategory && selectedCategory.subcategories) {
-          console.log('Found subcategories:', selectedCategory.subcategories) // Debug log
-          setSubcategories(selectedCategory.subcategories)
+        if (response.data && Array.isArray(response.data)) {
+          setCategories(response.data)
+          
+          // If product has a category, load its subcategories
+          if (product.category) {
+            console.log('Product category:', product.category) // Debug log
+            
+            // Try to find category by _id first, then by name if needed
+            const selectedCategory = response.data.find(cat => 
+              cat._id === product.category || cat.name === product.category
+            )
+            
+            if (selectedCategory && selectedCategory.subcategories) {
+              console.log('Found subcategories:', selectedCategory.subcategories) // Debug log
+              setSubcategories(selectedCategory.subcategories)
+            }
+          }
+        } else {
+          console.warn('Unexpected categories response format:', response.data)
+          toast.error('Failed to load categories: Invalid response format')
         }
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        toast.error('Failed to load categories')
+      } finally {
+        setCategoriesLoading(false)
       }
-    } else {
-      console.warn('Unexpected categories response format:', response.data)
-      toast.error('Failed to load categories: Invalid response format')
     }
-  } catch (error) {
-    console.error('Error fetching categories:', error)
-    toast.error('Failed to load categories')
-  } finally {
-    setCategoriesLoading(false)
-  }
-}
+    
     fetchCategories()
   }, [product.category])
 
@@ -134,6 +149,12 @@ const fetchCategories = async () => {
     }))
   }
 
+  // Helper function to convert comma-separated string to array
+  const convertStringToArray = (str) => {
+    if (!str || str.trim() === '') return [];
+    return str.split(',').map(item => item.trim()).filter(item => item !== '');
+  }
+
   // Handle image uploads
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files)
@@ -173,6 +194,24 @@ const fetchCategories = async () => {
       formDataToSend.append('quantity', formData.quantity.toString())
       formDataToSend.append('bestseller', formData.bestseller.toString())
       formDataToSend.append('status', formData.status)
+      
+      // Add new fields - convert comma-separated strings to arrays
+      const ingredientsArray = convertStringToArray(formData.ingredients);
+      const benefitsArray = convertStringToArray(formData.benefits);
+      
+      if (ingredientsArray.length > 0) {
+        formDataToSend.append("ingredients", JSON.stringify(ingredientsArray));
+      } else {
+        formDataToSend.append("ingredients", "[]"); // Empty array
+      }
+      
+      formDataToSend.append("howToUse", formData.howToUse);
+      
+      if (benefitsArray.length > 0) {
+        formDataToSend.append("benefits", JSON.stringify(benefitsArray));
+      } else {
+        formDataToSend.append("benefits", "[]"); // Empty array
+      }
       
       // Send removedImages as a proper JSON string
       formDataToSend.append('removedImages', JSON.stringify(removedImages))
@@ -234,6 +273,10 @@ const fetchCategories = async () => {
       toast.error(error.message || 'Failed to delete product')
     }
   }
+
+  // Calculate ingredient and benefit counts for display
+  const ingredientCount = formData.ingredients ? convertStringToArray(formData.ingredients).length : 0;
+  const benefitCount = formData.benefits ? convertStringToArray(formData.benefits).length : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-6 px-4 sm:px-6 lg:px-8">
@@ -313,6 +356,9 @@ const fetchCategories = async () => {
                 // Helper functions
                 getCategoryName={getCategoryName}
                 getSubcategoryName={getSubcategoryName}
+                // Counts for display
+                ingredientCount={ingredientCount}
+                benefitCount={benefitCount}
               />
             )}
           </div>
@@ -322,45 +368,100 @@ const fetchCategories = async () => {
   )
 }
 
-const ViewMode = ({ product, getCategoryName, getSubcategoryName }) => (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    {/* Images */}
-    <div>
-      <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Images</h3>
-      <div className="grid grid-cols-2 gap-4">
-        {product.image && product.image.map((img, index) => (
-          <div key={index} className="relative">
-            <img
-              src={img}
-              alt={`${product.name} ${index + 1}`}
-              className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
-            />
-          </div>
-        ))}
-      </div>
-    </div>
+const ViewMode = ({ product, getCategoryName, getSubcategoryName }) => {
+  // Convert arrays to comma-separated strings for display
+  const ingredientsString = product.ingredients && Array.isArray(product.ingredients) 
+    ? product.ingredients.join(', ') 
+    : '';
+  const benefitsString = product.benefits && Array.isArray(product.benefits) 
+    ? product.benefits.join(', ') 
+    : '';
 
-    {/* Details */}
-    <div className="space-y-6">
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Images */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Information</h3>
-        <div className="space-y-3 bg-gray-50 rounded-lg p-4">
-          <DetailRow label="Name" value={product.name} />
-          <DetailRow label="Description" value={product.description} />
-          <DetailRow label="Category" value={getCategoryName(product.category)} />
-          <DetailRow label="Subcategory" value={getSubcategoryName(product.subcategory) || 'N/A'} />
-          <DetailRow label="Cost Price" value={`${currency}${product.cost}`} />
-          <DetailRow label="Original Price" value={`${currency}${product.price}`} />
-          <DetailRow label="Discount Price" value={`${currency}${product.discountprice}`} />
-          <DetailRow label="Quantity" value={product.quantity} />
-          <DetailRow label="Bestseller" value={product.bestseller ? 'Yes' : 'No'} />
-          <DetailRow label="Status" value={product.status || 'draft'} />
-          <DetailRow label="Date Added" value={new Date(product.date).toLocaleDateString()} />
+        <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Images</h3>
+        <div className="grid grid-cols-2 gap-4">
+          {product.image && product.image.map((img, index) => (
+            <div key={index} className="relative">
+              <img
+                src={img}
+                alt={`${product.name} ${index + 1}`}
+                className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+              />
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Details */}
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Information</h3>
+          <div className="space-y-3 bg-gray-50 rounded-lg p-4">
+            <DetailRow label="Name" value={product.name} />
+            <DetailRow label="Description" value={product.description} />
+            <DetailRow label="Category" value={getCategoryName(product.category)} />
+            <DetailRow label="Subcategory" value={getSubcategoryName(product.subcategory) || 'N/A'} />
+            <DetailRow label="Cost Price" value={`${currency}${product.cost}`} />
+            <DetailRow label="Original Price" value={`${currency}${product.price}`} />
+            <DetailRow label="Discount Price" value={`${currency}${product.discountprice}`} />
+            <DetailRow label="Quantity" value={product.quantity} />
+            <DetailRow label="Bestseller" value={product.bestseller ? 'Yes' : 'No'} />
+            <DetailRow label="Status" value={product.status || 'draft'} />
+            <DetailRow label="Date Added" value={new Date(product.date).toLocaleDateString()} />
+          </div>
+        </div>
+        
+        {/* Ingredients Section */}
+        {ingredientsString && ingredientsString.trim() !== "" && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
+              <FaFlask className="w-5 h-5 mr-2 text-blue-600" />
+              Ingredients
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({product.ingredients.length} ingredients)
+              </span>
+            </h3>
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <p className="text-gray-700">{ingredientsString}</p>
+            </div>
+          </div>
+        )}
+
+        {/* How to Use Section */}
+        {product.howToUse && product.howToUse.trim() !== "" && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
+              <FaInfoCircle className="w-5 h-5 mr-2 text-purple-600" />
+              How to Use
+            </h3>
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div className="text-gray-700 whitespace-pre-line">{product.howToUse}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Benefits Section */}
+        {benefitsString && benefitsString.trim() !== "" && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
+              <FaCheckCircle className="w-5 h-5 mr-2 text-green-600" />
+              Benefits
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({product.benefits.length} benefits)
+              </span>
+            </h3>
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <p className="text-gray-700">{benefitsString}</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 const EditMode = ({ 
   formData, 
@@ -376,7 +477,9 @@ const EditMode = ({
   onRemoveNewImage,
   pricingSummary,
   getCategoryName,
-  getSubcategoryName
+  getSubcategoryName,
+  ingredientCount,
+  benefitCount
 }) => {
   const {
     discountAmount,
@@ -539,7 +642,74 @@ const EditMode = ({
         </div>
       </div>
 
-      {/* Rest of the EditMode component remains the same */}
+      {/* New Optional Fields Section */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-semibold mb-6 text-gray-900">Additional Information</h3>
+        
+        {/* Ingredients Section */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-medium text-gray-700 flex items-center">
+              <FaFlask className="w-4 h-4 mr-2 text-blue-600" />
+              Ingredients (Optional)
+            </label>
+            <span className="text-xs text-gray-500">{ingredientCount} ingredient(s)</span>
+          </div>
+          
+          <textarea
+            name="ingredients"
+            value={formData.ingredients}
+            onChange={onChange}
+            placeholder="Enter ingredients separated by commas, e.g., Aloe Vera Extract, Vitamin C, Hyaluronic Acid"
+            rows="3"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Enter ingredients separated by commas. Example: "Aloe Vera Extract, Vitamin C, Hyaluronic Acid"
+          </p>
+        </div>
+
+        {/* How to Use Section */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+            <FaInfoCircle className="w-4 h-4 mr-2 text-purple-600" />
+            How to Use (Optional)
+          </label>
+          <textarea
+            name="howToUse"
+            value={formData.howToUse}
+            onChange={onChange}
+            placeholder="Provide instructions for using the product..."
+            rows="4"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">Provide usage instructions if applicable</p>
+        </div>
+
+        {/* Benefits Section */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-medium text-gray-700 flex items-center">
+              <FaCheckCircle className="w-4 h-4 mr-2 text-green-600" />
+              Benefits (Optional)
+            </label>
+            <span className="text-xs text-gray-500">{benefitCount} benefit(s)</span>
+          </div>
+          
+          <textarea
+            name="benefits"
+            value={formData.benefits}
+            onChange={onChange}
+            placeholder="Enter benefits separated by commas, e.g., Hydrates skin, Reduces wrinkles, Brightens complexion"
+            rows="3"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Enter benefits separated by commas. Example: "Hydrates skin, Reduces wrinkles, Brightens complexion"
+          </p>
+        </div>
+      </div>
+
       {/* Image Management */}
       <div className="border-t pt-6">
         <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Images</h3>

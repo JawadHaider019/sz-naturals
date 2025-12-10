@@ -23,7 +23,10 @@ import {
   FaCheckCircle,
   FaTimes,
   FaClock,
-  FaHourglassEnd
+  FaHourglassEnd,
+  FaFlask,
+  FaInfoCircle,
+  FaListUl
 } from 'react-icons/fa'
 
 const List = ({ token }) => {
@@ -34,6 +37,20 @@ const List = ({ token }) => {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [selectedDeal, setSelectedDeal] = useState(null)
   const [viewMode, setViewMode] = useState('list')
+  const [previewProduct, setPreviewProduct] = useState(null)
+  const [categories, setCategories] = useState([]) // Store categories globally
+
+  // Fetch categories for mapping
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(backendUrl + '/api/categories');
+      if (response.data && Array.isArray(response.data)) {
+        setCategories(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -85,6 +102,11 @@ const List = ({ token }) => {
       setLoading(false)
     }
   }
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   // Fixed function to update expired deals on backend
   const updateExpiredDealsOnBackend = async () => {
@@ -276,8 +298,11 @@ const List = ({ token }) => {
   }
 
   const handleViewProduct = (product) => {
-    setSelectedProduct(product)
-    setViewMode('view')
+    setPreviewProduct(product)
+  }
+
+  const handleClosePreview = () => {
+    setPreviewProduct(null)
   }
 
   const handleEditProduct = (product) => {
@@ -348,6 +373,7 @@ const List = ({ token }) => {
           token={token}
           onBack={handleBackToList}
           onSave={handleBackToList}
+          categories={categories} 
         />
       )
     } else if (activeTab === 'deals' && selectedDeal) {
@@ -454,6 +480,7 @@ const List = ({ token }) => {
             onStatusChange={updateProductStatus}
             onStockUpdate={updateProductStock}
             token={token}
+            categories={categories} // Pass categories to ProductListView
           />
         )}
 
@@ -466,68 +493,81 @@ const List = ({ token }) => {
             onStatusChange={updateDealStatus}
           />
         )}
+
+        {/* Product Preview Modal */}
+        {previewProduct && (
+          <ProductDetailsPreview
+            product={previewProduct}
+            onClose={handleClosePreview}
+            onEdit={(product) => {
+              handleClosePreview();
+              setSelectedProduct(product);
+              setViewMode('edit');
+            }}
+            categories={categories} // Pass categories to preview modal
+          />
+        )}
       </div>
     </div>
   )
 }
 
-// Product List View Component
-const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, onStockUpdate, token }) => {
-  const [categoriesMap, setCategoriesMap] = useState({});
-  const [subcategoriesMap, setSubcategoriesMap] = useState({});
+// Product List View Component - UPDATED with proper category name mapping
+const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, onStockUpdate, token, categories }) => {
   
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(backendUrl + '/api/categories');
-        
-        if (response.data && Array.isArray(response.data)) {
-          const catMap = {};
-          const subMap = {};
-          
-          response.data.forEach(category => {
-            catMap[category._id] = category.name;
-            catMap[category.name] = category.name;
-            
-            if (category.subcategories && Array.isArray(category.subcategories)) {
-              category.subcategories.forEach(sub => {
-                subMap[sub._id] = sub.name;
-                subMap[sub.name] = sub.name;
-              });
-            }
-          });
-          
-          setCategoriesMap(catMap);
-          setSubcategoriesMap(subMap);
-        }
-      } catch (error) {
-        console.error('Error fetching categories for mapping:', error);
-      }
-    };
-    
-    fetchCategories();
-  }, []);
-
+  // Function to get category name by ID
   const getCategoryName = (categoryIdOrName) => {
     if (!categoryIdOrName) return 'Uncategorized';
-    if (categoriesMap[categoryIdOrName]) {
-      return categoriesMap[categoryIdOrName];
+    
+    // Check if it's already a name (not an ID)
+    if (typeof categoryIdOrName === 'string' && !categoryIdOrName.match(/^[0-9a-fA-F]{24}$/)) {
+      return categoryIdOrName;
     }
+    
+    // Find in categories array
+    if (categories && Array.isArray(categories)) {
+      const category = categories.find(cat => cat._id === categoryIdOrName);
+      if (category) return category.name;
+    }
+    
+    // If not found and looks like an ObjectId
     if (typeof categoryIdOrName === 'string' && categoryIdOrName.match(/^[0-9a-fA-F]{24}$/)) {
       return 'Deleted Category';
     }
+    
     return categoryIdOrName;
   };
 
-  const getSubcategoryName = (subcategoryIdOrName) => {
-    if (!subcategoryIdOrName) return 'Uncategorized';
-    if (subcategoriesMap[subcategoryIdOrName]) {
-      return subcategoriesMap[subcategoryIdOrName];
+  // Function to get subcategory name by ID
+  const getSubcategoryName = (categoryId, subcategoryId) => {
+    if (!subcategoryId) return 'Uncategorized';
+    
+    // Check if it's already a name
+    if (typeof subcategoryId === 'string' && !subcategoryId.match(/^[0-9a-fA-F]{24}$/)) {
+      return subcategoryId;
     }
-    if (typeof subcategoryIdOrName === 'string' && subcategoryIdOrName.match(/^[0-9a-fA-F]{24}$/)) {
+    
+    // Find in categories array
+    if (categories && Array.isArray(categories)) {
+      const category = categories.find(cat => cat._id === categoryId);
+      if (category && category.subcategories && Array.isArray(category.subcategories)) {
+        const subcategory = category.subcategories.find(sub => sub._id === subcategoryId);
+        if (subcategory) return subcategory.name;
+      }
+    }
+    
+    // If not found and looks like an ObjectId
+    if (typeof subcategoryId === 'string' && subcategoryId.match(/^[0-9a-fA-F]{24}$/)) {
       return 'Deleted Subcategory';
     }
-    return subcategoryIdOrName;
+    
+    return subcategoryId;
+  };
+
+  // Function to safely check array length
+  const getArrayLength = (array) => {
+    if (!array || !Array.isArray(array)) return 0;
+    return array.length;
   };
 
   return (
@@ -545,8 +585,11 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                   <div className="flex items-start space-x-3">
                     <img 
                       className="w-14 h-14 object-cover rounded-lg border border-gray-200 flex-shrink-0" 
-                      src={item.image[0]} 
+                      src={item.image?.[0] || '/placeholder-image.jpg'} 
                       alt={item.name} 
+                      onError={(e) => {
+                        e.target.src = '/placeholder-image.jpg';
+                      }}
                     />
                     <div className="flex-1 flex-wrap min-w-0">
                       <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">{item.name}</h3>
@@ -556,11 +599,33 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                       
                       {/* Quick Info Row */}
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium text-green-600">{currency}{item.discountprice}</span>
+                        <span className="font-medium text-green-600">{currency}{item.discountprice || item.price}</span>
                         <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full capitalize">
                           {getCategoryName(item.category)}
                         </span>
                         <StockIndicator quantity={item.quantity} />
+                      </div>
+                      
+                      {/* Indicators for New Fields */}
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {getArrayLength(item.ingredients) > 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">
+                            <FaFlask className="w-3 h-3 mr-1" />
+                            {getArrayLength(item.ingredients)} ingredients
+                          </span>
+                        )}
+                        {getArrayLength(item.benefits) > 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">
+                            <FaCheckCircle className="w-3 h-3 mr-1" />
+                            {getArrayLength(item.benefits)} benefits
+                          </span>
+                        )}
+                        {item.howToUse && item.howToUse.trim() !== "" && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs">
+                            <FaInfoCircle className="w-3 h-3 mr-1" />
+                            Usage guide
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -620,8 +685,11 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                   <div className="flex items-start space-x-4">
                     <img 
                       className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" 
-                      src={item.image[0]} 
-                      alt={item.name} 
+                      src={item.image?.[0] || '/placeholder-image.jpg'} 
+                      alt={item.name}
+                      onError={(e) => {
+                        e.target.src = '/placeholder-image.jpg';
+                      }}
                     />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 text-sm truncate mb-1">{item.name}</h3>
@@ -630,11 +698,38 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                       </p>
                       
                       <div className="flex items-center justify-between text-xs mb-3">
-                        <span className="font-medium text-green-600">{currency}{item.discountprice}</span>
+                        <span className="font-medium text-green-600">{currency}{item.discountprice || item.price}</span>
                         <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full capitalize">
                           {getCategoryName(item.category)}
                         </span>
                         <StockIndicator quantity={item.quantity} />
+                      </div>
+                      
+                      {/* Subcategory */}
+                      <div className="text-xs text-gray-600 mb-2">
+                        Sub: {getSubcategoryName(item.category, item.subcategory)}
+                      </div>
+                      
+                      {/* Indicators for New Fields */}
+                      <div className="mb-3 flex flex-wrap gap-1">
+                        {getArrayLength(item.ingredients) > 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">
+                            <FaFlask className="w-3 h-3 mr-1" />
+                            {getArrayLength(item.ingredients)} ingredients
+                          </span>
+                        )}
+                        {getArrayLength(item.benefits) > 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs">
+                            <FaCheckCircle className="w-3 h-3 mr-1" />
+                            {getArrayLength(item.benefits)} benefits
+                          </span>
+                        )}
+                        {item.howToUse && item.howToUse.trim() !== "" && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs">
+                            <FaInfoCircle className="w-3 h-3 mr-1" />
+                            Usage guide
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -680,6 +775,7 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Category</th>
+
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Price</th>
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Stock</th>
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Sales</th>
@@ -690,7 +786,7 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
             <tbody className="divide-y divide-gray-200">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="8">
                     <EmptyState type="products" />
                   </td>
                 </tr>
@@ -701,8 +797,11 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                       <div className="flex items-center space-x-3">
                         <img 
                           className="w-10 h-10 object-cover rounded-lg border border-gray-200" 
-                          src={item.image[0]} 
-                          alt={item.name} 
+                          src={item.image?.[0] || '/placeholder-image.jpg'} 
+                          alt={item.name}
+                          onError={(e) => {
+                            e.target.src = '/placeholder-image.jpg';
+                          }}
                         />
                         <div className="min-w-0 max-w-xs">
                           <p className="font-medium text-gray-900 text-sm truncate">{item.name}</p>
@@ -713,13 +812,19 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full capitalize">
-                        {getCategoryName(item.category)}
-                      </span>
+                      <div>
+                        <span className="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full capitalize mb-1">
+                          {getCategoryName(item.category)}
+                        </span>
+                        <div className="text-xs text-gray-600">
+                          {getSubcategoryName(item.category, item.subcategory)}
+                        </div>
+                      </div>
                     </td>
+               
                     <td className="py-3 px-4">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-green-600 text-sm">{currency}{item.discountprice}</span>
+                        <span className="font-semibold text-green-600 text-sm">{currency}{item.discountprice || item.price}</span>
                         {item.price > item.discountprice && (
                           <span className="text-gray-400 line-through text-xs">{currency}{item.price}</span>
                         )}
@@ -1359,5 +1464,239 @@ const EmptyState = ({ type }) => (
     </div>
   </div>
 )
+
+// Product Details Preview Modal Component - UPDATED with category names
+const ProductDetailsPreview = ({ product, onClose, onEdit, categories }) => {
+  if (!product) return null;
+
+  // Helper function to get category/subcategory names
+  const getCategoryName = (categoryIdOrName) => {
+    if (!categoryIdOrName) return 'Uncategorized';
+    
+    if (typeof categoryIdOrName === 'string' && !categoryIdOrName.match(/^[0-9a-fA-F]{24}$/)) {
+      return categoryIdOrName;
+    }
+    
+    if (categories && Array.isArray(categories)) {
+      const category = categories.find(cat => cat._id === categoryIdOrName);
+      if (category) return category.name;
+    }
+    
+    return typeof categoryIdOrName === 'string' && categoryIdOrName.match(/^[0-9a-fA-F]{24}$/) 
+      ? 'Deleted Category' 
+      : categoryIdOrName;
+  };
+
+  const getSubcategoryName = (categoryId, subcategoryId) => {
+    if (!subcategoryId) return 'Uncategorized';
+    
+    if (typeof subcategoryId === 'string' && !subcategoryId.match(/^[0-9a-fA-F]{24}$/)) {
+      return subcategoryId;
+    }
+    
+    if (categories && Array.isArray(categories)) {
+      const category = categories.find(cat => cat._id === categoryId);
+      if (category && category.subcategories && Array.isArray(category.subcategories)) {
+        const subcategory = category.subcategories.find(sub => sub._id === subcategoryId);
+        if (subcategory) return subcategory.name;
+      }
+    }
+    
+    return typeof subcategoryId === 'string' && subcategoryId.match(/^[0-9a-fA-F]{24}$/) 
+      ? 'Deleted Subcategory' 
+      : subcategoryId;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">{product.name}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <FaTimes className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-4">
+          {/* Images */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900">Product Images</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {product.image && product.image.map((img, index) => (
+                <img
+                  key={index}
+                  src={img}
+                  alt={`${product.name} - Image ${index + 1}`}
+                  className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                  onError={(e) => {
+                    e.target.src = '/placeholder-image.jpg';
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Basic Info Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Product Information</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Name</label>
+                  <p className="text-gray-900">{product.name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Description</label>
+                  <p className="text-gray-900 whitespace-pre-line">{product.description}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Category</label>
+                  <p className="text-gray-900">{getCategoryName(product.category)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Subcategory</label>
+                  <p className="text-gray-900">{getSubcategoryName(product.category, product.subcategory)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Pricing & Inventory</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Price</label>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg font-bold text-green-600">{currency}{product.discountprice || product.price}</span>
+                    {product.discountprice && product.discountprice < product.price && (
+                      <span className="text-gray-400 line-through">{currency}{product.price}</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Cost</label>
+                  <p className="text-gray-900">{currency}{product.cost || 0}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Quantity</label>
+                  <p className="text-gray-900">{product.quantity} units</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Total Sales</label>
+                  <p className="text-gray-900">{product.totalSales || 0} sold</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Ingredients Section */}
+          {product.ingredients && Array.isArray(product.ingredients) && product.ingredients.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3 text-gray-900 flex items-center">
+                <FaFlask className="w-5 h-5 mr-2 text-blue-600" />
+                Ingredients
+              </h3>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {product.ingredients.map((ingredient, index) => (
+                    <li key={index} className="flex items-center text-gray-700">
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                      {ingredient}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Benefits Section */}
+          {product.benefits && Array.isArray(product.benefits) && product.benefits.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3 text-gray-900 flex items-center">
+                <FaCheckCircle className="w-5 h-5 mr-2 text-green-600" />
+                Benefits
+              </h3>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {product.benefits.map((benefit, index) => (
+                    <li key={index} className="flex items-center text-gray-700">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                      {benefit}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* How to Use Section */}
+          {product.howToUse && product.howToUse.trim() !== "" && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3 text-gray-900 flex items-center">
+                <FaInfoCircle className="w-5 h-5 mr-2 text-purple-600" />
+                How to Use
+              </h3>
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                <div className="text-gray-700 whitespace-pre-line">{product.howToUse}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Status & Flags */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="text-sm font-medium text-gray-500 mb-1">Status</label>
+              <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                product.status === 'published' ? 'bg-green-100 text-green-800' :
+                product.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {product.status || 'draft'}
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="text-sm font-medium text-gray-500 mb-1">Bestseller</label>
+              <div className="flex items-center">
+                {product.bestseller ? (
+                  <FaCheckCircle className="w-5 h-5 text-yellow-500" />
+                ) : (
+                  <span className="text-gray-400">No</span>
+                )}
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="text-sm font-medium text-gray-500 mb-1">Views</label>
+              <p className="text-gray-900">{product.views || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 p-4 flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Close
+          </button>
+          <button
+            onClick={() => {
+              onClose();
+              onEdit(product);
+            }}
+            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center"
+          >
+            <FaEdit className="w-4 h-4 mr-2" />
+            Edit Product
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default List

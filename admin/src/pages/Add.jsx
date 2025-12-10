@@ -21,7 +21,11 @@ import {
   faReceipt,
   faShoppingBag,
   faCalendarAlt,
-  faDollarSign
+  faDollarSign,
+  faFlask,
+  faInfoCircle,
+  faCheckCircle,
+  faListUl
 } from '@fortawesome/free-solid-svg-icons';
 
 const Add = () => { 
@@ -43,6 +47,11 @@ const Add = () => {
   const [cost, setCost] = useState("");
   const [bestseller, setBestseller] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // --- New Optional Fields ---
+  const [ingredients, setIngredients] = useState(""); // Comma-separated string
+  const [howToUse, setHowToUse] = useState("");
+  const [benefits, setBenefits] = useState(""); // Comma-separated string
 
   // --- Deal State ---
   const [activeTab, setActiveTab] = useState('products'); // 'products' or 'deals'
@@ -174,6 +183,16 @@ const Add = () => {
   const productProfit = useMemo(() => calculateProductProfit(), [calculateProductProfit]);
   const productProfitPercentage = useMemo(() => calculateProductProfitPercentage(), [calculateProductProfitPercentage]);
 
+  // Helper function to convert comma-separated string to array
+  const convertStringToArray = (str) => {
+    if (!str || str.trim() === '') return [];
+    return str.split(',').map(item => item.trim()).filter(item => item !== '');
+  };
+
+  // Calculate ingredient and benefit counts for display
+  const ingredientCount = useMemo(() => convertStringToArray(ingredients).length, [ingredients]);
+  const benefitCount = useMemo(() => convertStringToArray(benefits).length, [benefits]);
+
   // --- Handlers ---
   const handleImageChange = useCallback((e, index) => {
     const file = e.target.files[0];
@@ -233,6 +252,10 @@ const Add = () => {
     setDealImages([null, null, null, null]);
     setDealStartDate("");
     setDealEndDate("");
+    // Reset new optional fields
+    setIngredients("");
+    setHowToUse("");
+    setBenefits("");
     
     // Reset to first category and subcategory
     if (categories.length > 0) {
@@ -276,6 +299,22 @@ const Add = () => {
         formData.append("cost", Number(cost || 0));
         formData.append("price", Number(price));
         formData.append("discountprice", Number(discountprice || 0));
+        
+        // New optional fields - convert comma-separated strings to arrays
+        const ingredientsArray = convertStringToArray(ingredients);
+        const benefitsArray = convertStringToArray(benefits);
+        
+        if (ingredientsArray.length > 0) {
+          formData.append("ingredients", JSON.stringify(ingredientsArray));
+        }
+        
+        if (howToUse.trim() !== "") {
+          formData.append("howToUse", howToUse);
+        }
+        
+        if (benefitsArray.length > 0) {
+          formData.append("benefits", JSON.stringify(benefitsArray));
+        }
 
         // Append product images with correct field names
         images.forEach((img, index) => {
@@ -368,6 +407,7 @@ const Add = () => {
     }
   }, [
     activeTab, name, description, category, subCategory, quantity, bestseller, cost, price, discountprice, images,
+    ingredients, howToUse, benefits,
     dealName, dealDescription, dealType, dealDiscountType, dealDiscountValue, dealTotal, finalPrice, dealStartDate,
     dealEndDate, dealProducts, dealImages, token, resetForm, backendUrl, logout
   ]);
@@ -406,8 +446,21 @@ const Add = () => {
       productDiscountPercentage={productDiscountPercentage}
       productProfit={productProfit}
       productProfitPercentage={productProfitPercentage}
+      // New optional fields
+      ingredients={ingredients}
+      setIngredients={setIngredients}
+      howToUse={howToUse}
+      setHowToUse={setHowToUse}
+      benefits={benefits}
+      setBenefits={setBenefits}
+      ingredientCount={ingredientCount}
+      benefitCount={benefitCount}
     />
-  ), [categories, category, subCategory, name, description, cost, price, discountprice, quantity, bestseller, productSavings, productDiscountPercentage, productProfit, productProfitPercentage]);
+  ), [
+    categories, category, subCategory, name, description, cost, price, discountprice, quantity, bestseller, 
+    productSavings, productDiscountPercentage, productProfit, productProfitPercentage,
+    ingredients, howToUse, benefits, ingredientCount, benefitCount
+  ]);
 
   const dealSection = useMemo(() => (
     <DealSection
@@ -616,7 +669,16 @@ const ProductSection = memo(({
   productSavings,
   productDiscountPercentage,
   productProfit,
-  productProfitPercentage
+  productProfitPercentage,
+  // New optional fields
+  ingredients,
+  setIngredients,
+  howToUse,
+  setHowToUse,
+  benefits,
+  setBenefits,
+  ingredientCount,
+  benefitCount
 }) => {
   const finalPrice = discountprice && discountprice > 0 ? Number(discountprice) : Number(price);
   const hasDiscount = discountprice && discountprice > 0 && discountprice < price;
@@ -700,6 +762,66 @@ const ProductSection = memo(({
         <InputField label="Selling Price *" value={price} onChange={setPrice} required />
         <InputField label="Discount Price" value={discountprice} onChange={setDiscountprice} />
         <InputField label="Quantity *" value={quantity} onChange={setQuantity} required />
+      </div>
+
+      {/* Ingredients Section */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700 flex items-center">
+            <FontAwesomeIcon icon={faFlask} className="mr-2 text-gray-600" />
+            Ingredients (Optional)
+          </label>
+          <span className="text-xs text-gray-500">{ingredientCount} ingredient(s)</span>
+        </div>
+        
+        <textarea
+          value={ingredients}
+          onChange={(e) => setIngredients(e.target.value)}
+          placeholder="Enter ingredients separated by commas, e.g., Aloe Vera Extract, Vitamin C, Hyaluronic Acid"
+          rows="3"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-sm sm:text-base"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Enter ingredients separated by commas. Example: "Aloe Vera Extract, Vitamin C, Hyaluronic Acid"
+        </p>
+      </div>
+
+      {/* How to Use Section */}
+      <div className="mb-4 sm:mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+          <FontAwesomeIcon icon={faInfoCircle} className="mr-2 text-gray-600" />
+          How to Use (Optional)
+        </label>
+        <textarea
+          value={howToUse}
+          onChange={(e) => setHowToUse(e.target.value)}
+          placeholder="Provide instructions for using the product..."
+          rows="4"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors h-20 sm:h-24 resize-none text-sm sm:text-base"
+        />
+        <p className="text-xs text-gray-500 mt-1">Provide usage instructions if applicable</p>
+      </div>
+
+      {/* Benefits Section */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700 flex items-center">
+            <FontAwesomeIcon icon={faCheckCircle} className="mr-2 text-gray-600" />
+            Benefits (Optional)
+          </label>
+          <span className="text-xs text-gray-500">{benefitCount} benefit(s)</span>
+        </div>
+        
+        <textarea
+          value={benefits}
+          onChange={(e) => setBenefits(e.target.value)}
+          placeholder="Enter benefits separated by commas, e.g., Hydrates skin, Reduces wrinkles, Brightens complexion"
+          rows="3"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-colors text-sm sm:text-base"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Enter benefits separated by commas. Example: "Hydrates skin, Reduces wrinkles, Brightens complexion"
+        </p>
       </div>
 
       {/* Product Summary */}

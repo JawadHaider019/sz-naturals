@@ -1,7 +1,6 @@
 
 
 import whyus from './whyus.webp';
-import Newsletter from './Newsletter.webp';
 import logo from './logo.webp';
 import hero_img from './hero_img.webp';
 import cart_icon from './cart_icon.png';
@@ -38,6 +37,5 @@ export const assets = {
   about_img2,
   about_img3,
   whyus,
-  Newsletter,
 };
 

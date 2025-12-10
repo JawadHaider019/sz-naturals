@@ -17,6 +17,22 @@ const productSchema = new mongoose.Schema({
         type: String, 
         required: true 
     },
+    
+    ingredients: { 
+        type: [String], 
+        required: false,
+        default: []
+    },
+    howToUse: { 
+        type: String, 
+        required: false,
+        default: "" 
+    },
+    benefits: { 
+        type: [String], 
+        required: false,
+        default: []
+    },
     bestseller: { type: Boolean, default: false },
     date: { type: Number, required: true },  
     status: {

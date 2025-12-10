@@ -117,7 +117,7 @@ const Testimonial = () => {
     }
 
     return (
-        <div className="py-16 md:py-24 px-4 relative overflow-x-hidden">
+        <div className="py-16 md:py-24 px-4 relative overflow-hidden">
             {/* Background decorative elements */}
             <div className="absolute top-0 left-0 w-32 h-32 bg-gray-100 rounded-full -translate-x-16 -translate-y-16 opacity-50"></div>
             <div className="absolute bottom-0 right-0 w-40 h-40 bg-gray-100 rounded-full translate-x-20 translate-y-20 opacity-50"></div>

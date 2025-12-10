@@ -582,7 +582,7 @@ const LoginModal = ({ isOpen, onClose, initialMode = 'login' }) => {
             )}
 
             {/* Terms and conditions */}
-            <p className="mt-6 text-center text-xs text-gray-500">
+            {/* <p className="mt-6 text-center text-xs text-gray-500">
               By continuing, you agree to our{" "}
               <button type="button" className="underline hover:text-gray-700">
                 Terms of Service
@@ -591,7 +591,7 @@ const LoginModal = ({ isOpen, onClose, initialMode = 'login' }) => {
               <button type="button" className="underline hover:text-gray-700">
                 Privacy Policy
               </button>
-            </p>
+            </p> */}
           </form>
         </div>
       </div>
