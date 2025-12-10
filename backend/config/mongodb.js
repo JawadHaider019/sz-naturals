@@ -5,96 +5,49 @@ const connectDB = async () => {
     const MONGODB_URI = process.env.MONGODB_URI;
     
     if (!MONGODB_URI) {
-      console.error('❌ MONGODB_URI environment variable is missing');
+      console.error('❌ MONGODB_URI is not set');
       return;
     }
     
-    console.log('🔍 Checking MONGODB_URI...');
+    console.log('🔗 CONNECTING TO E-COMMERCE DATABASE');
     
-    // Sanitize for logging (hide password)
-    const sanitizedUri = MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
-    console.log('📡 Original URI:', sanitizedUri);
-    
-    // Parse the URI
+    // FORCE e-commerce database regardless of what's in the URI
+    // Replace ANY database name with 'e-commerce'
     let connectionString = MONGODB_URI;
     
-    // Check if URI already has a database name
-    const uriMatch = MONGODB_URI.match(/mongodb\+srv:\/\/[^/]+\/([^?]+)/);
+    // Method 1: Replace sz-naturals with e-commerce
+    connectionString = connectionString.replace(/\/sz-naturals(\?|$)/, '/e-commerce$1');
     
-    if (uriMatch && uriMatch[1]) {
-      // URI has a database name already
-      const existingDbName = uriMatch[1];
-      console.log(`📊 Found existing database: ${existingDbName}`);
-      
-      if (existingDbName !== 'e-commerce') {
-        console.log(`⚠️  Warning: Connecting to ${existingDbName} instead of e-commerce`);
-      }
-    } else {
-      // No database name, add /e-commerce
-      console.log('📝 No database name found, adding /e-commerce');
-      connectionString = MONGODB_URI.replace(/\/(\?|$)/, '/e-commerce$1');
-      console.log('🔧 Updated URI:', connectionString.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+    // Method 2: If still not e-commerce, force it
+    if (!connectionString.includes('/e-commerce')) {
+      // Remove any database name and add e-commerce
+      connectionString = connectionString.replace(/\/([^/?]+)(\?|$)/, '/e-commerce$2');
     }
     
-    console.log('🔗 Connecting to MongoDB...');
+    console.log('📡 Final URI:', connectionString.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
-    // Event listeners
-    mongoose.connection.on('connected', () => {
-      console.log(`✅ MongoDB Connected Successfully!`);
-      console.log(`📊 Database: ${mongoose.connection.db?.databaseName || 'Not specified'}`);
-      console.log(`🏢 Host: ${mongoose.connection.host}`);
-    });
-    
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB Error:', err.message);
-    });
-    
-    const conn = await mongoose.connect(connectionString, {
+    await mongoose.connect(connectionString, {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
     });
     
-    // Immediate check
-    console.log(`📈 Connection readyState: ${mongoose.connection.readyState}`);
-    console.log(`🎯 Connected to database: ${mongoose.connection.db?.databaseName}`);
+    const dbName = mongoose.connection.db.databaseName;
+    console.log(`✅ Connected to database: ${dbName}`);
     
-    // Check if products collection exists and has data
-    try {
-      const collections = await mongoose.connection.db.listCollections().toArray();
-      console.log(`📁 Total collections: ${collections.length}`);
-      
-      if (collections.find(c => c.name === 'products')) {
-        const Product = mongoose.model('Product');
-        const productCount = await Product.countDocuments();
-        console.log(`📦 Products in database: ${productCount}`);
-        
-        if (productCount === 0) {
-          console.log('⚠️  Warning: products collection exists but is empty');
-        }
-      } else {
-        console.log('⚠️  Warning: products collection not found');
-      }
-    } catch (err) {
-      console.log('⚠️  Could not check collections:', err.message);
+    // List collections
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    console.log(`📁 Collections in ${dbName}: ${collections.length}`);
+    
+    if (dbName !== 'e-commerce') {
+      console.error('❌ CRITICAL: Connected to wrong database!');
+      console.error('   Expected: e-commerce');
+      console.error(`   Got: ${dbName}`);
+      console.error('   Update MONGODB_URI in Northflank environment!');
     }
-    
-    return conn;
     
   } catch (error) {
-    console.error(`❌ MongoDB Connection Failed:`);
-    console.error('Error:', error.message);
-    
-    // Provide specific troubleshooting
-    if (error.message.includes('bad auth')) {
-      console.log('\n🔑 Authentication Error: Check username/password');
-    } else if (error.message.includes('ENOTFOUND')) {
-      console.log('\n🌐 DNS Error: Check cluster URL');
-    } else if (error.message.includes('timed out')) {
-      console.log('\n⏱️  Timeout: Check network/whitelist settings');
-    }
-    
-    return null;
+    console.error('❌ Connection failed:', error.message);
   }
 };
 
