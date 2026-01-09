@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useMemo, useRef } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { ShopContext } from "../context/ShopContext";
 import Title from './Title';
 import ProductItem from "./ProductItem";
@@ -18,9 +18,13 @@ const LatestCollection = () => {
   const sliderRef = useRef(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [shouldUseSlider, setShouldUseSlider] = useState(false);
+  const isProcessing = useRef(false);
+  const initialCacheLoaded = useRef(false);
 
   // 1. Load cached data IMMEDIATELY on component mount
   useEffect(() => {
+    if (initialCacheLoaded.current) return;
+    
     const loadCachedData = () => {
       try {
         const cached = localStorage.getItem(CACHE_KEY);
@@ -31,6 +35,7 @@ const LatestCollection = () => {
           if (isCacheValid && data && data.length > 0) {
             setLatestProducts(data);
             setHasCachedData(true);
+            initialCacheLoaded.current = true;
             return true;
           }
         }
@@ -43,9 +48,14 @@ const LatestCollection = () => {
     loadCachedData();
   }, []);
 
-  // 2. Process products and update cache silently
-  const processedProducts = useMemo(() => {
-    if (!products || !Array.isArray(products)) return [];
+  // 2. Process products and update cache - FIXED VERSION
+  useEffect(() => {
+    if (!products || !Array.isArray(products) || isProcessing.current) {
+      return;
+    }
+
+    // Prevent multiple processing
+    isProcessing.current = true;
 
     try {
       // Filter out draft products and only show published products
@@ -54,7 +64,7 @@ const LatestCollection = () => {
         return isPublished;
       });
 
-      // Remove duplicate products by ID and get latest 4 from published products
+      // Remove duplicate products by ID
       const uniqueProducts = publishedProducts.filter((product, index, self) =>
         index === self.findIndex(p => p._id === product._id)
       );
@@ -62,32 +72,31 @@ const LatestCollection = () => {
       // Get latest 4 products (or all if less than 4)
       const latestUniqueProducts = uniqueProducts.slice(0, 4);
 
-      // Always save fresh data to cache when available
-      if (latestUniqueProducts.length > 0) {
+      // Check if products have actually changed
+      const currentProductsStr = JSON.stringify(latestProducts);
+      const newProductsStr = JSON.stringify(latestUniqueProducts);
+      
+      if (currentProductsStr !== newProductsStr && latestUniqueProducts.length > 0) {
+        // Update state
+        setLatestProducts(latestUniqueProducts);
+        
+        // Update cache
         try {
           const cacheData = {
             data: latestUniqueProducts,
             timestamp: Date.now()
           };
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-          
-          // Only update state if we didn't have cached data before
-          // OR if fresh data is different from cached data
-          if (!hasCachedData || JSON.stringify(latestUniqueProducts) !== JSON.stringify(latestProducts)) {
-            setLatestProducts(latestUniqueProducts);
-          }
         } catch (error) {
           // Silently fail - cache update is not critical
         }
       }
-
-      return latestUniqueProducts;
-
     } catch (err) {
       console.error('Error processing products:', err);
-      return [];
+    } finally {
+      isProcessing.current = false;
     }
-  }, [products]);
+  }, [products, latestProducts]); // Note: Added latestProducts to dependencies
 
   // Check if we should show slider based on screen size and item count
   useEffect(() => {

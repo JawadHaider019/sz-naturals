@@ -27,12 +27,12 @@ const Footer = () => {
         },
         contact: {
             customerSupport: {
-                email: "contact@sznturals.com",
-                phone: "+92-300-123-4567",
+                email: "info.sznaturals@gmail.com",
+                phone: "+923134471652",
             }
         },
         location: {
-            displayAddress: "123 Beauty Street, Karachi, Pakistan",
+            displayAddress: "Pakistan",
             googleMapsLink: ""
         },
         socialMedia: {

@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useMemo, useRef } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { ShopContext } from "../context/ShopContext";
 import Title from "./Title";
 import ProductItem from "./ProductItem";
@@ -18,9 +18,13 @@ const BestSeller = () => {
   const sliderRef = useRef(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [shouldUseSlider, setShouldUseSlider] = useState(false);
+  const isProcessing = useRef(false);
+  const initialCacheLoaded = useRef(false);
 
   // 1. Load cached data IMMEDIATELY on component mount
   useEffect(() => {
+    if (initialCacheLoaded.current) return;
+    
     const loadCachedData = () => {
       try {
         const cached = localStorage.getItem(CACHE_KEY);
@@ -31,6 +35,7 @@ const BestSeller = () => {
           if (isCacheValid && data && data.length > 0) {
             setBestSeller(data);
             setHasCachedData(true);
+            initialCacheLoaded.current = true;
             return true;
           }
         }
@@ -43,9 +48,13 @@ const BestSeller = () => {
     loadCachedData();
   }, []);
 
-  // Use useMemo to filter and process bestseller products - MAX 3 PRODUCTS
-  const processedBestSellers = useMemo(() => {
-    if (!products || !Array.isArray(products)) return [];
+  // 2. Process bestseller products - FIXED VERSION
+  useEffect(() => {
+    if (!products || !Array.isArray(products) || isProcessing.current) {
+      return;
+    }
+
+    isProcessing.current = true;
 
     try {
       // Filter out draft products and only show published products
@@ -69,38 +78,43 @@ const BestSeller = () => {
 
       // If no explicit best sellers found, show empty state
       if (bestProducts.length === 0) {
-        return [];
+        // Only update if we currently have bestsellers
+        if (bestSeller.length > 0) {
+          setBestSeller([]);
+          // Clear cache when no bestsellers
+          localStorage.removeItem(CACHE_KEY);
+        }
+        return;
       }
 
       // Limit to 3 bestseller products
       const finalBestSellers = bestProducts.slice(0, 3);
 
-      // Always save fresh data to cache when available
-      if (finalBestSellers.length > 0) {
+      // Check if products have actually changed
+      const currentProductsStr = JSON.stringify(bestSeller);
+      const newProductsStr = JSON.stringify(finalBestSellers);
+      
+      if (currentProductsStr !== newProductsStr && finalBestSellers.length > 0) {
+        // Update state
+        setBestSeller(finalBestSellers);
+        
+        // Update cache
         try {
           const cacheData = {
             data: finalBestSellers,
             timestamp: Date.now()
           };
           localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-          
-          // Only update state if we didn't have cached data before
-          // OR if fresh data is different from cached data
-          if (!hasCachedData || JSON.stringify(finalBestSellers) !== JSON.stringify(bestSeller)) {
-            setBestSeller(finalBestSellers);
-          }
         } catch (error) {
           // Silently fail - cache update is not critical
         }
       }
-
-      return finalBestSellers;
-
     } catch (err) {
       console.error('Error processing best sellers:', err);
-      return [];
+    } finally {
+      isProcessing.current = false;
     }
-  }, [products, bestSeller, hasCachedData]);
+  }, [products, bestSeller]); // Dependencies: products and bestSeller
 
   // Function to get the second image from product data
   const getSecondImage = (product) => {
@@ -206,7 +220,7 @@ const BestSeller = () => {
     return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto";
   };
 
-  // Enhanced Slick Slider settings - ALWAYS use slider for consistency
+  // Enhanced Slick Slider settings
   const sliderSettings = {
     dots: true, 
     infinite: bestSeller.length > 1,
