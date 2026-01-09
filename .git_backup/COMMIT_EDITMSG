@@ -1,0 +1,5 @@
+Fix: Update DealCollection.jsx imports
+
+- Changed Slider import from CSS to react-slick component
+- Added react-icons for arrow icons
+- Updated package dependencies

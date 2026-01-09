@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- ✅ CRITICAL: Favicon Setup -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#000000">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- ✅ CRITICAL: SEO Meta Tags for Indexing -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <link rel="canonical" href="https://sznaturals.com/">
+    
+    <!-- ✅ Google Search Console Meta Tag Verification -->
+    <meta name="google-site-verification" content="c0876b0e7a2b01c2" />
+    
+    <!-- Meta Description -->
+    <meta name="description" content="SZ Naturals - Where Ancient Herbal Wisdom meets Modern Hair Excellence. Pure, handmade natural hair care products crafted with organic ingredients for your wellness." />
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="SZ Naturals - Herbal Hair Care Products | Ancient Wisdom Meets Modern Excellence">
+    <meta property="og:description" content="Pure, handmade natural hair care products crafted with organic ingredients like Amla, Shikakai, Bhringraj, and Neem for complete hair wellness.">
+    <meta property="og:url" content="https://sznaturals.com">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://sznaturals.com/logo.png">
+    <meta property="og:site_name" content="SZ Naturals">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="SZ Naturals - Herbal Hair Care Excellence">
+    <meta name="twitter:description" content="Pure, handmade natural hair care products crafted with organic ingredients for complete hair wellness">
+    <meta name="twitter:image" content="https://sznaturals.com/logo.png">
+    
+    <title>SZ Naturals - Where Ancient Herbal Wisdom meets Modern Hair Excellence</title>
+
+    <!-- ✅ Critical CSS Inline -->
+    <style>
+      /* Critical above-the-fold styles */
+      #root {
+        min-height: 100vh;
+      }
+      
+      /* Skeleton loading states */
+      .skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+      }
+      
+      @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      
+      /* Ensure content is visible immediately */
+      .critical-visible {
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+      
+      /* Basic layout to prevent CLS */
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+    </style>
+
+    <!-- ✅ Preload critical resources -->
+    <link rel="preload" href="/src/main.jsx" as="script" crossorigin>
+    
+    <!-- ✅ Preconnect to important origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- ✅ DNS-prefetch for external domains -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+
+    <!-- ✅ Enhanced Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "SZ Naturals",
+      "url": "https://sznaturals.com",
+      "logo": "https://sznaturals.com/logo.png",
+      "description": "Where Ancient Herbal Wisdom meets Modern Hair Excellence. Pure, handmade natural hair care products.",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "123 Natural Street",
+        "addressLocality": "Green Valley",
+        "addressCountry": "PK"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+92-333-3333",
+        "contactType": "customer service",
+        "email": "codewithjerry0o0@gmail.com",
+        "availableLanguage": ["en", "ur"]
+      },
+      "sameAs": [
+        "https://www.facebook.com/sznaturals",
+        "https://www.instagram.com/sznaturals",
+        "https://www.tiktok.com/@sznaturals"
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <!-- ✅ Skeleton screen for immediate visual feedback -->
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column;">
+        <!-- Header skeleton -->
+        <div style="height: 70px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;" class="skeleton"></div>
+        
+        <!-- Hero skeleton -->
+        <div style="flex: 1; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div style="width: 200px; height: 60px; background: #e9ecef; margin-bottom: 2rem; border-radius: 8px;" class="skeleton"></div>
+          <div style="width: 300px; height: 20px; background: #e9ecef; margin-bottom: 1rem; border-radius: 4px;" class="skeleton"></div>
+          <div style="width: 150px; height: 50px; background: #e9ecef; border-radius: 8px;" class="skeleton"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ Defer non-critical scripts -->
+    <script type="module" src="/src/main.jsx" defer></script>
+    
+    <!-- ✅ Load non-critical CSS after page load -->
+    <script>
+      // Load non-critical CSS after page load
+      function loadNonCriticalCSS() {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/src/index.css'; // Your main CSS file
+        document.head.appendChild(link);
+      }
+      
+      // Load when the page is idle
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(loadNonCriticalCSS);
+      } else {
+        // Fallback for older browsers
+        window.addEventListener('load', loadNonCriticalCSS);
+      }
+      
+      // Remove skeleton when app loads
+      window.addEventListener('DOMContentLoaded', function() {
+        const skeleton = document.querySelector('#root > div');
+        if (skeleton) {
+          setTimeout(() => {
+            skeleton.style.opacity = '0';
+            setTimeout(() => {
+              if (skeleton.parentNode) {
+                skeleton.parentNode.removeChild(skeleton);
+              }
+            }, 300);
+          }, 100);
+        }
+      });
+    </script>
+  </body>
+</html>

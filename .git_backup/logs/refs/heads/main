@@ -1,0 +1,101 @@
+0000000000000000000000000000000000000000 3f4abcc3ccba129dcfb753b874dae9015dde3bef JawadHaider019 <it.xjawad0019@gmail.com> 1760167585 -0700	commit (initial): Clean up node_modules and add .gitignore
+3f4abcc3ccba129dcfb753b874dae9015dde3bef 05bee26754b5ea7ae56f0a609d92440b4365b6a5 JawadHaider019 <it.xjawad0019@gmail.com> 1760167769 -0700	commit: Initial commit - full Naturabliss 2.0 project
+05bee26754b5ea7ae56f0a609d92440b4365b6a5 05bee26754b5ea7ae56f0a609d92440b4365b6a5 JawadHaider019 <it.xjawad0019@gmail.com> 1760167777 -0700	Branch: renamed refs/heads/master to refs/heads/main
+05bee26754b5ea7ae56f0a609d92440b4365b6a5 567a59146ae4fad645fbb7d8f5543f012e3cb60b JawadHaider019 <it.xjawad0019@gmail.com> 1760200298 -0700	commit: Images are not upload in database from frontend
+567a59146ae4fad645fbb7d8f5543f012e3cb60b d4c1197608f97ac69efeb98db17fdbd40f57d412 JawadHaider019 <it.xjawad0019@gmail.com> 1760257064 -0700	commit: Images are now uploading
+d4c1197608f97ac69efeb98db17fdbd40f57d412 9927cb7d122f3b9cbba44da8c832ddeb12f4b93a JawadHaider019 <it.xjawad0019@gmail.com> 1760259653 -0700	commit: now product and deal images are uploading via postman and via frontend no error
+9927cb7d122f3b9cbba44da8c832ddeb12f4b93a 2ed60387736dafd499e857a5a213d6ca27708a41 JawadHaider019 <it.xjawad0019@gmail.com> 1760261883 -0700	commit: fix token expires in add product and deal now it will logout if expires
+2ed60387736dafd499e857a5a213d6ca27708a41 03cb7996cb5c6c18215c676222409c1a874bbdfa JawadHaider019 <it.xjawad0019@gmail.com> 1760268029 -0700	commit: backend is updated products and deals
+03cb7996cb5c6c18215c676222409c1a874bbdfa 7b881457f18196d522badbcca659556c01155efa JawadHaider019 <it.xjawad0019@gmail.com> 1760441816 -0700	commit: I have done the image updating and removing and also improve some desgin but what remaining is to update status of product in backend and frontend
+7b881457f18196d522badbcca659556c01155efa e884db64f3dd298ff1c7afd1af528e0cc2a36f16 JawadHaider019 <it.xjawad0019@gmail.com> 1760457404 -0700	commit: now status is working also the summery of product and deals are added
+e884db64f3dd298ff1c7afd1af528e0cc2a36f16 efc422597130a8f61361c94597f1b6188b7bb0fc JawadHaider019 <it.xjawad0019@gmail.com> 1760460037 -0700	commit: now sidebar is navbar and content management is on top also deal type is added and login issue also handled
+efc422597130a8f61361c94597f1b6188b7bb0fc edac2741872bf460e993c5a5345ebcc0fbc3a308 JawadHaider019 <it.xjawad0019@gmail.com> 1760524768 -0700	commit: dashboard backend is ready and also frontend is update now the next is to complete the integration
+edac2741872bf460e993c5a5345ebcc0fbc3a308 ab2dc4fa59a0ff2c78d0948e2d6d5995fddb46b6 JawadHaider019 <it.xjawad0019@gmail.com> 1760638288 -0700	commit: dashboard backend and frontend is update perfectly no chnages needed not just integrate it
+ab2dc4fa59a0ff2c78d0948e2d6d5995fddb46b6 229ce1f69e84d62f9b343c1d9da5bd778164150f JawadHaider019 <it.xjawad0019@gmail.com> 1760646070 -0700	commit: now dashboard is integrated fine
+229ce1f69e84d62f9b343c1d9da5bd778164150f 8fc0decf45d008e8f29c8a82dc525933211dc176 JawadHaider019 <it.xjawad0019@gmail.com> 1760654798 -0700	commit: now categoeris and deal type working frontend and backend
+8fc0decf45d008e8f29c8a82dc525933211dc176 2106025e3bd8a3bdeb133b4338fa80b7ec5646b3 JawadHaider019 <it.xjawad0019@gmail.com> 1760659553 -0700	commit: bold page is updated more
+2106025e3bd8a3bdeb133b4338fa80b7ec5646b3 cb1267714aa2b122cac58f321b6805ce46381761 JawadHaider019 <it.xjawad0019@gmail.com> 1760737437 -0700	commit: banner is fully working now comment frontend and backend is compelete
+cb1267714aa2b122cac58f321b6805ce46381761 c2026e7913a7bf505769de4b9e5391eb5855a542 JawadHaider019 <it.xjawad0019@gmail.com> 1760825116 -0700	commit: now admin panel is complete with backend alhumdoillah
+c2026e7913a7bf505769de4b9e5391eb5855a542 f5cb164cab0cf7d065f953bfe8e4397f04799eed JawadHaider019 <it.xjawad0019@gmail.com> 1760897538 -0700	commit: banner
+f5cb164cab0cf7d065f953bfe8e4397f04799eed 364ed035ef4bbaf8e0fd7e1636e3463650e457a0 JawadHaider019 <it.xjawad0019@gmail.com> 1760988702 -0700	commit: only blog is left all other features are done and working alhumduillah
+364ed035ef4bbaf8e0fd7e1636e3463650e457a0 1ccd760b337cd8c6d855f6ae18f30d9faa5f3999 JawadHaider019 <it.xjawad0019@gmail.com> 1760996094 -0700	commit: order cancel status update next is qunatity in list and deal chart in dashboard and then blog and then info for admin then styling
+1ccd760b337cd8c6d855f6ae18f30d9faa5f3999 399fe4702ea28ec4058c70aa3f2e114d6d51e350 JawadHaider019 <it.xjawad0019@gmail.com> 1761033355 -0700	commit: now order and qunatity is fixed
+399fe4702ea28ec4058c70aa3f2e114d6d51e350 166d5f08f4ef65fbafc8970a1d58aca6b2d21e15 JawadHaider019 <it.xjawad0019@gmail.com> 1761071282 -0700	commit: full project is complete
+166d5f08f4ef65fbafc8970a1d58aca6b2d21e15 d7ef6f56ebd645d26fd051dcbcbb5eb4048fe59d JawadHaider019 <it.xjawad0019@gmail.com> 1761151961 -0700	commit: now email is sending propery and all over project is compeleted
+d7ef6f56ebd645d26fd051dcbcbb5eb4048fe59d b586c4e64a6fe8ce15930128012646b954518677 JawadHaider019 <it.xjawad0019@gmail.com> 1761274380 -0700	commit: web is complete just making it ready to deploy
+b586c4e64a6fe8ce15930128012646b954518677 53fb640e5f45bc256f80a95fcf8a4e5aeba38694 JawadHaider019 <it.xjawad0019@gmail.com> 1761304071 -0700	commit: now i have removed every testing feature from webiste
+53fb640e5f45bc256f80a95fcf8a4e5aeba38694 d52cc947e7faf0c421d0697f5ff02608de40e5d2 JawadHaider019 <it.xjawad0019@gmail.com> 1761386947 -0700	commit: last commit
+d52cc947e7faf0c421d0697f5ff02608de40e5d2 3426d232ef2a4ff9ad952b2a3de93b7a92f35de4 JawadHaider019 <it.xjawad0019@gmail.com> 1761387954 -0700	commit: update server and vercel.json
+3426d232ef2a4ff9ad952b2a3de93b7a92f35de4 d4663d71edce8d2feba37b54c8d46bee4288a9d4 JawadHaider019 <it.xjawad0019@gmail.com> 1761388263 -0700	commit: update vercel.json
+d4663d71edce8d2feba37b54c8d46bee4288a9d4 f3e716b454c9f3f5c4f8ee9519e310f5003df04f JawadHaider019 <it.xjawad0019@gmail.com> 1761388788 -0700	commit: again commit
+f3e716b454c9f3f5c4f8ee9519e310f5003df04f 0ca4fa8f08f48b560199489896a9c85abdadf3c8 JawadHaider019 <it.xjawad0019@gmail.com> 1761389080 -0700	commit: fix .env
+0ca4fa8f08f48b560199489896a9c85abdadf3c8 7df315829f3de8e6987fbab36eadce50e4a7e0da JawadHaider019 <it.xjawad0019@gmail.com> 1761389869 -0700	commit: Remove .env files from Git and add to .gitignore
+7df315829f3de8e6987fbab36eadce50e4a7e0da ec8e3cc03473d1b3322d8de2c200dac35d6b935e JawadHaider019 <it.xjawad0019@gmail.com> 1761401497 -0700	commit: fix team
+ec8e3cc03473d1b3322d8de2c200dac35d6b935e 071bbaf1aabd5fe9b60b76ec0e49f7e3f8255d53 JawadHaider019 <it.xjawad0019@gmail.com> 1761401817 -0700	commit: Remove .env files from Git and add to .gitignore
+071bbaf1aabd5fe9b60b76ec0e49f7e3f8255d53 bbb3f9167defc8f16785bca04bd82bf450cbd02f JawadHaider019 <it.xjawad0019@gmail.com> 1761403365 -0700	commit: update server
+bbb3f9167defc8f16785bca04bd82bf450cbd02f cb1f128f1e0adc03bc8b3dac2b1a269c12bd0a4e JawadHaider019 <it.xjawad0019@gmail.com> 1761403466 -0700	commit: Remove .env files from Git and add to .gitignore
+cb1f128f1e0adc03bc8b3dac2b1a269c12bd0a4e 2ad018b27e2baf3026b7529272c9c0b7fa224d5b JawadHaider019 <it.xjawad0019@gmail.com> 1761406197 -0700	commit: i hope its fix now
+2ad018b27e2baf3026b7529272c9c0b7fa224d5b 53d1a9e641c4a42eaee238729bf6d8b5e3d3b967 JawadHaider019 <it.xjawad0019@gmail.com> 1761418876 -0700	commit: fix errors after real domain
+53d1a9e641c4a42eaee238729bf6d8b5e3d3b967 032d978c495cefc45ed0b060e7b0b8d8938ec5cb JawadHaider019 <it.xjawad0019@gmail.com> 1761418904 -0700	commit: `Refactored API base URL usage across frontend and backend codebases to use VITE_BACKEND_URL environment variable`
+032d978c495cefc45ed0b060e7b0b8d8938ec5cb 3f16fcd93215017604359f25f6145493354e867d JawadHaider019 <it.xjawad0019@gmail.com> 1761419483 -0700	commit (merge): Merge branch 'main' of https://github.com/JawadHaider019/naturabliss2.0
+3f16fcd93215017604359f25f6145493354e867d bcbd0a9a6378f24b370571c78bc1360d5b2d7a30 JawadHaider019 <it.xjawad0019@gmail.com> 1761419496 -0700	commit: fixess
+bcbd0a9a6378f24b370571c78bc1360d5b2d7a30 f49114804c7e7e2be4348b798aec60e975f86a0e JawadHaider019 <it.xjawad0019@gmail.com> 1761420704 -0700	commit: Remove .env files from Git and add to .gitignore
+f49114804c7e7e2be4348b798aec60e975f86a0e b6d0413b5dbc2963cd4ce3da21b62fe0aa390e6b JawadHaider019 <it.xjawad0019@gmail.com> 1762179137 +0500	commit: Apply .gitignore and remove sensitive files
+b6d0413b5dbc2963cd4ce3da21b62fe0aa390e6b d80f2cbe7ced486c8fda4bab4d21aa8029d8b282 JawadHaider019 <it.xjawad0019@gmail.com> 1762180051 +0500	commit: Remove .env files from Git and add to .gitignore
+d80f2cbe7ced486c8fda4bab4d21aa8029d8b282 4417961025a9bb5bdfb7d2837b723598d76cace3 JawadHaider019 <it.xjawad0019@gmail.com> 1762273733 +0500	commit: first commit
+4417961025a9bb5bdfb7d2837b723598d76cace3 4417961025a9bb5bdfb7d2837b723598d76cace3 JawadHaider019 <it.xjawad0019@gmail.com> 1762273760 +0500	Branch: renamed refs/heads/main to refs/heads/main
+4417961025a9bb5bdfb7d2837b723598d76cace3 e97a7e0dbb6748b11f9ed8cb5a7c79a25cad8842 JawadHaider019 <it.xjawad0019@gmail.com> 1762349900 +0500	commit: template ready
+e97a7e0dbb6748b11f9ed8cb5a7c79a25cad8842 e97a7e0dbb6748b11f9ed8cb5a7c79a25cad8842 JawadHaider019 <it.xjawad0019@gmail.com> 1762350563 +0500	Branch: renamed refs/heads/main to refs/heads/main
+e97a7e0dbb6748b11f9ed8cb5a7c79a25cad8842 a69c3d61c54006a004192b8693d69a1ed825cb6a JawadHaider019 <it.xjawad0019@gmail.com> 1762517814 +0500	commit: change branding
+a69c3d61c54006a004192b8693d69a1ed825cb6a 5c842f812349a88541783e15ce5c3746da81d612 JawadHaider019 <it.xjawad0019@gmail.com> 1762620533 +0500	commit: update full code just deals left
+5c842f812349a88541783e15ce5c3746da81d612 2603f5b26edcd014965e5a6bfeddcd6f8460a7b1 JawadHaider019 <it.xjawad0019@gmail.com> 1762684121 +0500	commit: fix errors
+2603f5b26edcd014965e5a6bfeddcd6f8460a7b1 f6f45e201de60da556a05f25c398adcc173efb36 JawadHaider019 <it.xjawad0019@gmail.com> 1762710331 +0500	commit: home page redesgined
+f6f45e201de60da556a05f25c398adcc173efb36 9e84bad3c0b0eda82d5b21761dd8576e62a93f47 JawadHaider019 <it.xjawad0019@gmail.com> 1762781156 +0500	commit: full frontend updated
+9e84bad3c0b0eda82d5b21761dd8576e62a93f47 7d60d815a74e7355450b8ebb124acd64233fa589 JawadHaider019 <it.xjawad0019@gmail.com> 1762783909 +0500	commit: updated
+7d60d815a74e7355450b8ebb124acd64233fa589 1a219bbeb81f1f5ea0d517597fe23db27559f1b3 JawadHaider019 <it.xjawad0019@gmail.com> 1762802254 +0500	commit: fix more sizing
+1a219bbeb81f1f5ea0d517597fe23db27559f1b3 5c84ac7a9052952e1618545718ac457d88a3a081 JawadHaider019 <it.xjawad0019@gmail.com> 1762842866 +0500	commit: meta desc updated
+5c84ac7a9052952e1618545718ac457d88a3a081 754b5c584ee788a39495cf94b32917077808ef40 JawadHaider019 <it.xjawad0019@gmail.com> 1762843266 +0500	commit: add verification
+754b5c584ee788a39495cf94b32917077808ef40 26385abc784aca26376d3cf4d18c4f6199f6e0d1 JawadHaider019 <it.xjawad0019@gmail.com> 1762850365 +0500	commit: image optimze
+26385abc784aca26376d3cf4d18c4f6199f6e0d1 f4f579af3b6dedb55b0888d8be8b85ced0874b64 JawadHaider019 <it.xjawad0019@gmail.com> 1762852057 +0500	commit: more optimze
+f4f579af3b6dedb55b0888d8be8b85ced0874b64 d77b3f53c576a5ee2280258d125c548d647708aa JawadHaider019 <it.xjawad0019@gmail.com> 1762853108 +0500	commit: check it now
+d77b3f53c576a5ee2280258d125c548d647708aa 29a228435e05da63b301c635d886c37422c48513 JawadHaider019 <it.xjawad0019@gmail.com> 1762853759 +0500	commit: convert image to webp
+29a228435e05da63b301c635d886c37422c48513 8448d0fb442e465db876c81ec3b10cadd8548852 JawadHaider019 <it.xjawad0019@gmail.com> 1762854125 +0500	commit: fix blog end point
+8448d0fb442e465db876c81ec3b10cadd8548852 4d6ea9b1e555e2493899b5ca23d72250dbb8b7ba JawadHaider019 <it.xjawad0019@gmail.com> 1762854681 +0500	commit: fix banners
+4d6ea9b1e555e2493899b5ca23d72250dbb8b7ba 839d8683a45db930a7d11e56a8cf8327438b5f56 JawadHaider019 <it.xjawad0019@gmail.com> 1762855843 +0500	commit: hero updated
+839d8683a45db930a7d11e56a8cf8327438b5f56 9489dd80d96a3412439932d9d06b9a28938487e2 JawadHaider019 <it.xjawad0019@gmail.com> 1762856198 +0500	commit: updaed hero
+9489dd80d96a3412439932d9d06b9a28938487e2 35c21778de2e8bb9d67af2990ff3ca04fff3eee6 JawadHaider019 <it.xjawad0019@gmail.com> 1762856275 +0500	commit: revert changes
+35c21778de2e8bb9d67af2990ff3ca04fff3eee6 68fc6e3cef19145bfb85aeabe37e8b72fd9ce964 JawadHaider019 <it.xjawad0019@gmail.com> 1762862074 +0500	commit: icon updated
+68fc6e3cef19145bfb85aeabe37e8b72fd9ce964 90b0c459ce3b4bf08e0376c1a48fb64a2987a92d JawadHaider019 <it.xjawad0019@gmail.com> 1762863092 +0500	commit: updated fav
+90b0c459ce3b4bf08e0376c1a48fb64a2987a92d c9aabebeeb9091d3a3ae547314817402574dd351 JawadHaider019 <it.xjawad0019@gmail.com> 1762863603 +0500	commit: updateing crawling
+c9aabebeeb9091d3a3ae547314817402574dd351 88cb4506a111fc7ac936ed8ede7fc3609d92d6b8 JawadHaider019 <it.xjawad0019@gmail.com> 1762880054 +0500	commit: update product
+88cb4506a111fc7ac936ed8ede7fc3609d92d6b8 ab4a50a7ef848c7c554b93ea816370f33a24874e JawadHaider019 <it.xjawad0019@gmail.com> 1762947920 +0500	commit: banner updated
+ab4a50a7ef848c7c554b93ea816370f33a24874e d998c6626290c0959da21b2b267e8f591a3ca390 JawadHaider019 <it.xjawad0019@gmail.com> 1763286485 +0500	commit: updated product discount and sizing
+d998c6626290c0959da21b2b267e8f591a3ca390 182f81e688b48ad554707f8b0ae492bc2f45064e JawadHaider019 <it.xjawad0019@gmail.com> 1763287088 +0500	commit: fix: add terser dependency for build
+182f81e688b48ad554707f8b0ae492bc2f45064e fff2ce41caa1208d5d282803e189504b617d2a06 JawadHaider019 <it.xjawad0019@gmail.com> 1763734664 +0500	commit: updated fixes
+fff2ce41caa1208d5d282803e189504b617d2a06 b7e731939c66c0eb009d34eac7364f524b27cbb2 JawadHaider019 <it.xjawad0019@gmail.com> 1763743216 +0500	commit: updated
+b7e731939c66c0eb009d34eac7364f524b27cbb2 35ec4e85bcafbf60c425293a6f301da0c4d334c8 JawadHaider019 <it.xjawad0019@gmail.com> 1763804840 +0500	commit: chnage images
+35ec4e85bcafbf60c425293a6f301da0c4d334c8 3ede7b961f55f0f92e201a351de6d951ccd89731 JawadHaider019 <it.xjawad0019@gmail.com> 1763809031 +0500	commit: updated banner size issue
+3ede7b961f55f0f92e201a351de6d951ccd89731 8fd40f267fdee129770711a434f98ff40d4c5de8 JawadHaider019 <it.xjawad0019@gmail.com> 1763809454 +0500	commit: update admin
+8fd40f267fdee129770711a434f98ff40d4c5de8 b3811c7a7660382885c1fe77fed465a97a9a1ebc JawadHaider019 <it.xjawad0019@gmail.com> 1763809536 +0500	commit: logo updated
+b3811c7a7660382885c1fe77fed465a97a9a1ebc b211208889fbf4a1ecbdff1f66437af307cb49c0 JawadHaider019 <it.xjawad0019@gmail.com> 1763913052 +0500	commit: remove zip validation
+b211208889fbf4a1ecbdff1f66437af307cb49c0 081d127b4ee67d767a773c1c33ff3bf58f904bc3 JawadHaider019 <it.xjawad0019@gmail.com> 1763913391 +0500	commit: fix errros
+081d127b4ee67d767a773c1c33ff3bf58f904bc3 59232b6cf4c2eff71b3bd4f6f522f89aa097e786 JawadHaider019 <it.xjawad0019@gmail.com> 1763926843 +0500	commit: fix cart issue
+59232b6cf4c2eff71b3bd4f6f522f89aa097e786 8691b394b6f4e2e7b33f0c7211f61371cb5a78e1 JawadHaider019 <it.xjawad0019@gmail.com> 1765212125 +0500	commit: first commit
+8691b394b6f4e2e7b33f0c7211f61371cb5a78e1 8691b394b6f4e2e7b33f0c7211f61371cb5a78e1 JawadHaider019 <it.xjawad0019@gmail.com> 1765212129 +0500	Branch: renamed refs/heads/main to refs/heads/main
+8691b394b6f4e2e7b33f0c7211f61371cb5a78e1 999f0342994f238044ec4b28cef4bbc1d5387e2a JawadHaider019 <it.xjawad0019@gmail.com> 1765212269 +0500	commit: Clean initial commit
+999f0342994f238044ec4b28cef4bbc1d5387e2a 4f6d932cafc4a0ee5412b31ba06175a0a4d90aae JawadHaider019 <it.xjawad0019@gmail.com> 1765212884 +0500	commit: updated indexing
+4f6d932cafc4a0ee5412b31ba06175a0a4d90aae 537191cbf1325803c390cef5158c077a33f1af84 JawadHaider019 <it.xjawad0019@gmail.com> 1765344591 +0500	commit: updated full styling
+537191cbf1325803c390cef5158c077a33f1af84 342a9170606ae4d36c99cad8a20157071031e28c JawadHaider019 <it.xjawad0019@gmail.com> 1765359467 +0500	commit: fix db
+342a9170606ae4d36c99cad8a20157071031e28c f0d16ccc1d0a08f1ee70102b9a42aee19a6b3e08 JawadHaider019 <it.xjawad0019@gmail.com> 1765360894 +0500	commit: updated db
+f0d16ccc1d0a08f1ee70102b9a42aee19a6b3e08 c3aa58c504683c96b7747716e1a35eb65e651d00 JawadHaider019 <it.xjawad0019@gmail.com> 1765363120 +0500	commit: fix db issue
+c3aa58c504683c96b7747716e1a35eb65e651d00 53370588545b5f817feda4f180b6744de90b9869 JawadHaider019 <it.xjawad0019@gmail.com> 1765363403 +0500	commit: update issue
+53370588545b5f817feda4f180b6744de90b9869 017c15631bc59f679edb87251b6276f9c8cc8752 JawadHaider019 <it.xjawad0019@gmail.com> 1765369133 +0500	commit: updated mongodb
+017c15631bc59f679edb87251b6276f9c8cc8752 4257e7410a43468a88b2ccad50b321c3dfcb8d5a JawadHaider019 <it.xjawad0019@gmail.com> 1765369652 +0500	commit: again test db
+4257e7410a43468a88b2ccad50b321c3dfcb8d5a 2322168e998b15e5dc5e077d1cb4b8e8b3028d00 JawadHaider019 <it.xjawad0019@gmail.com> 1765370330 +0500	commit: updated index
+2322168e998b15e5dc5e077d1cb4b8e8b3028d00 2f1eed2619b4ce417edd5b55990400c2ea8b05d8 JawadHaider019 <it.xjawad0019@gmail.com> 1767690210 +0500	commit: updated
+2f1eed2619b4ce417edd5b55990400c2ea8b05d8 2c1ee1e6ba869816e007e4d5e4e4e3c0f9dd4315 JawadHaider019 <it.xjawad0019@gmail.com> 1767788269 +0500	commit: place order without login
+2c1ee1e6ba869816e007e4d5e4e4e3c0f9dd4315 83101cbb7e9332fc343aa989afb3da69d18a7219 JawadHaider019 <it.xjawad0019@gmail.com> 1767868879 +0500	commit: update
+83101cbb7e9332fc343aa989afb3da69d18a7219 3b147bdc3866e5edb1e776fe0fc73e78b8b8611e JawadHaider019 <it.xjawad0019@gmail.com> 1767874338 +0500	commit: updating cards
+3b147bdc3866e5edb1e776fe0fc73e78b8b8611e d276e86f5c7262ae53c21ee653d39f42d856f861 JawadHaider019 <it.xjawad0019@gmail.com> 1767876577 +0500	commit: updated shopcontext
+d276e86f5c7262ae53c21ee653d39f42d856f861 9f16d351794fdf097555cc9eaa563f58a9eacf94 JawadHaider019 <it.xjawad0019@gmail.com> 1767877830 +0500	commit: updated context again
+9f16d351794fdf097555cc9eaa563f58a9eacf94 565878cb6a9aae345bdd6e9d9c87b679d106721f JawadHaider019 <it.xjawad0019@gmail.com> 1767892251 +0500	commit: updated cards
