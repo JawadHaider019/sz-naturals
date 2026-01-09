@@ -14,7 +14,6 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
 const BestSeller = () => {
   const { products, productsLoading } = useContext(ShopContext);
   const [bestSeller, setBestSeller] = useState([]);
-  const [isUsingCache, setIsUsingCache] = useState(false);
   const [hasCachedData, setHasCachedData] = useState(false);
   const sliderRef = useRef(null);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -31,7 +30,6 @@ const BestSeller = () => {
           
           if (isCacheValid && data && data.length > 0) {
             setBestSeller(data);
-            setIsUsingCache(true);
             setHasCachedData(true);
             return true;
           }
@@ -90,10 +88,9 @@ const BestSeller = () => {
           // OR if fresh data is different from cached data
           if (!hasCachedData || JSON.stringify(finalBestSellers) !== JSON.stringify(bestSeller)) {
             setBestSeller(finalBestSellers);
-            setIsUsingCache(false); // Now showing fresh data
           }
         } catch (error) {
-          console.error('Error saving cache:', error);
+          // Silently fail - cache update is not critical
         }
       }
 
@@ -173,22 +170,6 @@ const BestSeller = () => {
       window.removeEventListener('resize', checkScreenSize);
     };
   }, [bestSeller.length]);
-
-  // Cache indicator component
-  const CacheIndicator = () => {
-    if (!isUsingCache) return null;
-    
-    return (
-      <div className="flex justify-center items-center mt-2 mb-1">
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 animate-pulse">
-          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-          </svg>
-          Loading fresh favorites...
-        </span>
-      </div>
-    );
-  };
 
   // Custom Next Arrow Component - Hide on mobile
   const NextArrow = ({ onClick }) => {
@@ -362,7 +343,10 @@ const BestSeller = () => {
     };
   }, []);
 
-  // KEY CHANGE: Only show loader when NO cached data AND backend is still loading
+  // Show skeletons ONLY when:
+  // 1. Backend is loading (productsLoading = true)
+  // 2. No products yet (bestSeller.length === 0)
+  // 3. No cached data available (!hasCachedData)
   if (productsLoading && bestSeller.length === 0 && !hasCachedData) {
     // Show skeleton only on first visit (no cache)
     return (
@@ -398,7 +382,7 @@ const BestSeller = () => {
         <div className="mb-4">
           <Title text1={'CUSTOMERS'} text2={'FAVORITES'} />
         </div>
-        <CacheIndicator />
+        {/* CacheIndicator removed - no loading messages */}
         <p className="text-gray-600 mt-4 max-w-2xl mx-auto text-base md:text-lg">
          The herbal products our community loves most - proven effective for hair growth, shine, and scalp health.
         </p>
