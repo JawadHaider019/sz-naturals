@@ -35,7 +35,7 @@
         "@eslint/js": "^9.13.0",
         "@types/react": "^18.3.12",
         "@types/react-dom": "^18.3.1",
-        "@vitejs/plugin-react": "^4.7.0",
+        "@vitejs/plugin-react": "^5.1.2",
         "autoprefixer": "^10.4.20",
         "eslint": "^9.14.0",
         "eslint-plugin-react": "^7.37.2",
@@ -48,6 +48,8 @@
         "rollup-plugin-visualizer": "^6.0.5",
         "tailwindcss": "^3.4.14",
         "terser": "^5.44.1",
-        "vite": "^5.4.21"
+        "vite": "^7.3.1",
+        "vite-plugin-pwa": "^1.2.0",
+        "vite-plugin-sitemap": "^0.8.2"
     }
 }

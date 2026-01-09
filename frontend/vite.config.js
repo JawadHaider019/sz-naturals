@@ -1,32 +1,71 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+// import { defineConfig } from 'vite';
+// import react from '@vitejs/plugin-react';
+// import { VitePWA } from 'vite-plugin-pwa';
+
+// export default defineConfig({
+//   plugins: [
+//     react(),
+//     VitePWA({
+//       registerType: 'autoUpdate',
+//       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+//       manifest: {
+//         name: 'SZ Naturals',
+//         short_name: 'SZ Naturals',
+//         description: 'Herbal hair care products',
+//         theme_color: '#ffffff',
+//         icons: [
+//           {
+//             src: 'pwa-192x192.png',
+//             sizes: '192x192',
+//             type: 'image/png'
+//           },
+//           {
+//             src: 'pwa-512x512.png',
+//             sizes: '512x512',
+//             type: 'image/png'
+//           }
+//         ]
+//       }
+//     })
+//   ],
+//   server: {
+//     port: 3000,
+//     open: true
+//   },
+//   build: {
+//     outDir: 'dist',
+//     sourcemap: false,
+//     rollupOptions: {
+//       output: {
+//         manualChunks: {
+//           vendor: ['react', 'react-dom'],
+//           ui: ['react-icons', 'slick-carousel']
+//         }
+//       }
+//     }
+//   }
+// });
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+// Remove PWA for now to fix build issues
 
 export default defineConfig({
   plugins: [
-    react(),
+    react()
   ],
-  base: "./",
-  server: { 
-    port: 5174,
-    host: true // Allows access from network
-  },
   build: {
-    target: 'es2015',
+    outDir: 'dist',
+    emptyOutDir: false, // Prevent permission issues
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['react-toastify', 'react-icons'],
-          'utils-vendor': ['axios', 'react-helmet-async']
+          vendor: ['react', 'react-dom'],
+          ui: ['react-icons', 'slick-carousel']
         }
       }
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-      }
-    },
-    chunkSizeWarningLimit: 1000 // Increase warning limit
+    }
+  },
+  server: {
+    port: 3000
   }
-})
+});

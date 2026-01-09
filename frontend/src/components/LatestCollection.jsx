@@ -7,14 +7,45 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
+// Cache configuration
+const CACHE_KEY = 'latestProductsCache';
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache (longer for better UX)
+
 const LatestCollection = () => {
   const { products, productsLoading } = useContext(ShopContext);
   const [latestProducts, setLatestProducts] = useState([]);
+  const [isUsingCache, setIsUsingCache] = useState(false);
+  const [hasCachedData, setHasCachedData] = useState(false);
   const sliderRef = useRef(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [shouldUseSlider, setShouldUseSlider] = useState(false);
 
-  // Use useMemo to filter and process products - MAX 4 PRODUCTS
+  // 1. Load cached data IMMEDIATELY on component mount
+  useEffect(() => {
+    const loadCachedData = () => {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          const isCacheValid = Date.now() - timestamp < CACHE_DURATION;
+          
+          if (isCacheValid && data && data.length > 0) {
+            setLatestProducts(data);
+            setIsUsingCache(true);
+            setHasCachedData(true);
+            return true; // We have cached data
+          }
+        }
+      } catch (error) {
+        console.error('Error loading cache:', error);
+      }
+      return false; // No cached data
+    };
+
+    loadCachedData();
+  }, []);
+
+  // 2. Process products and update cache
   const processedProducts = useMemo(() => {
     if (!products || !Array.isArray(products)) return [];
 
@@ -33,16 +64,35 @@ const LatestCollection = () => {
       // Get latest 4 products (or all if less than 4)
       const latestUniqueProducts = uniqueProducts.slice(0, 4);
 
+      // Always save fresh data to cache when available
+      if (latestUniqueProducts.length > 0) {
+        try {
+          const cacheData = {
+            data: latestUniqueProducts,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+          
+          // Only update state if we didn't have cached data before
+          // OR if fresh data is different from cached data
+          if (!hasCachedData || JSON.stringify(latestUniqueProducts) !== JSON.stringify(latestProducts)) {
+            setLatestProducts(latestUniqueProducts);
+            setIsUsingCache(false); // Now showing fresh data
+          }
+        } catch (error) {
+          console.error('Error saving cache:', error);
+        }
+      }
+
       return latestUniqueProducts;
 
     } catch (err) {
+      console.error('Error processing products:', err);
       return [];
     }
   }, [products]);
 
-  useEffect(() => {
-    setLatestProducts(processedProducts);
-  }, [processedProducts]);
+  // 3. No separate useEffect needed - processedProducts handles updates
 
   // Check if we should show slider based on screen size and item count
   useEffect(() => {
@@ -72,13 +122,31 @@ const LatestCollection = () => {
       }
     };
 
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
+    if (latestProducts.length > 0) {
+      checkScreenSize();
+      window.addEventListener('resize', checkScreenSize);
+    }
     
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
   }, [latestProducts.length]);
+
+  // Cache indicator component
+  const CacheIndicator = () => {
+    if (!isUsingCache) return null;
+    
+    return (
+      <div className="flex justify-center items-center mt-2 mb-1">
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 animate-pulse">
+          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          Loading fresh data...
+        </span>
+      </div>
+    );
+  };
 
   // Custom Next Arrow Component - Hide on mobile
   const NextArrow = ({ onClick }) => {
@@ -110,16 +178,15 @@ const LatestCollection = () => {
   const getSecondImage = (product) => {
     // Try multiple possible image data structures
     if (product.image && Array.isArray(product.image) && product.image.length > 1) {
-      return product.image[1]; // Second image from array
+      return product.image[1];
     } else if (product.images && Array.isArray(product.images) && product.images.length > 1) {
-      return product.images[1]; // Second image from 'images' array
+      return product.images[1];
     } else if (product.secondaryImage) {
-      return product.secondaryImage; // Direct secondaryImage field
+      return product.secondaryImage;
     } else if (product.second_image) {
-      return product.second_image; // Alternative field name
+      return product.second_image;
     }
     
-    // If no second image is available, return null or the first image
     return product.image && product.image.length > 0 ? product.image[0] : null;
   };
 
@@ -165,7 +232,7 @@ const LatestCollection = () => {
     beforeChange: (current, next) => setCurrentSlide(next),
     responsive: [
       {
-        breakpoint: 1280, // Desktop
+        breakpoint: 1280,
         settings: {
           slidesToShow: Math.min(4, latestProducts.length),
           slidesToScroll: 1,
@@ -175,7 +242,7 @@ const LatestCollection = () => {
         }
       },
       {
-        breakpoint: 1024, // Laptop
+        breakpoint: 1024,
         settings: {
           slidesToShow: Math.min(3, latestProducts.length),
           slidesToScroll: 1,
@@ -185,7 +252,7 @@ const LatestCollection = () => {
         }
       },
       {
-        breakpoint: 768, // Tablet
+        breakpoint: 768,
         settings: {
           slidesToShow: Math.min(2, latestProducts.length),
           slidesToScroll: 1,
@@ -195,7 +262,7 @@ const LatestCollection = () => {
         }
       },
       {
-        breakpoint: 640, // Mobile
+        breakpoint: 640,
         settings: {
           slidesToShow: 1,
           slidesToScroll: 1,
@@ -285,11 +352,11 @@ const LatestCollection = () => {
     };
   }, []);
 
-  // Loading skeletons for the LatestCollection component
-  if (productsLoading) {
+  // KEY CHANGE: Only show loader when NO cached data AND backend is still loading
+  if (productsLoading && latestProducts.length === 0 && !hasCachedData) {
+    // Show skeleton only on first visit (no cache)
     return (
       <div className="my-16 md:my-24">
-        {/* Centered heading skeleton */}
         <div className="text-center mb-8 md:mb-12">
           <div className="mb-4">
             <div className="h-10 w-48 bg-gray-200 rounded-lg mx-auto animate-pulse"></div>
@@ -298,7 +365,6 @@ const LatestCollection = () => {
           <div className="h-5 w-64 bg-gray-200 rounded mx-auto mt-2 animate-pulse"></div>
         </div>
         
-        {/* Products grid skeleton - show 4 skeleton items */}
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 max-w-6xl mx-auto gap-4 md:gap-6 px-4 sm:px-6">
           {[1, 2, 3, 4].map((i) => (
             <ProductItem key={`skeleton-${i}`} isLoading={true} />
@@ -308,24 +374,23 @@ const LatestCollection = () => {
     );
   }
 
-  // Don't render anything if no products after loading
-  // This will hide the section completely when no products
-  if (latestProducts.length === 0) {
+  // Don't render anything if no products at all (even after backend load)
+  if (latestProducts.length === 0 && !productsLoading) {
     return null;
   }
 
   return (
     <div className="my-16 md:my-24">
-      <div className="text-center mb-8 md:mb-12">
-        <div className="mb-4">
+      <div className="text-center mb-6 md:mb-10">
+        <div className="mb-3">
           <Title text1={'Recently '} text2={'Added'} />
         </div>
-        <p className="text-gray-600 mt-4 max-w-2xl mx-auto text-base md:text-lg">
+        <CacheIndicator />
+        <p className="text-gray-600 mt-3 max-w-2xl mx-auto text-base md:text-lg">
           Explore our latest additions to the herbal collection - designed for visible hair transformation.
         </p>
       </div>
       {shouldUseSlider ? (
-        // Show slider based on screen size logic
         <div className="relative px-1 sm:px-2">
           <Slider ref={sliderRef} {...sliderSettings}>
             {latestProducts.map((item) => {
@@ -351,7 +416,6 @@ const LatestCollection = () => {
             })}
           </Slider>
           
-          {/* Add custom arrows outside the slider - hidden on mobile */}
           {latestProducts.length > 1 && (
             <>
               <PrevArrow onClick={() => sliderRef.current?.slickPrev()} />
@@ -360,7 +424,6 @@ const LatestCollection = () => {
           )}
         </div>
       ) : (
-        // Show regular grid when slider is not needed
         <div className={`grid ${getGridColumns()} gap-4 md:gap-6 px-4 sm:px-6`}>
           {latestProducts.map((item) => {
             const primaryImage = getPrimaryImage(item);
