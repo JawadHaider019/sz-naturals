@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 import Title from './Title';
 import DealItem, { DealItemSkeleton } from "./DealItem.jsx";
 import axios from 'axios';
-import Slider from "slick-carousel/slick/slick.css";
+import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 // Memoized arrow components - IMPROVED VERSION
 const NextArrow = memo(({ onClick, isVisible }) => (
@@ -413,7 +414,6 @@ const DealCollection = () => {
         </div>
       )}
     </div>
-    
   );
 };
 

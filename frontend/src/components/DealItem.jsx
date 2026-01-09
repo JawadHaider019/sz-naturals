@@ -15,6 +15,7 @@ const DEAL_TYPE_CONFIG = {
   weekly_special: { label: "WEEKLY SPECIAL", color: "bg-teal-600 text-white" },
 };
 
+
 // ---------------- Rating Stars (Updated to match ProductItem) -----------
 const RatingStars = memo(({ rating = 0 }) => {
   const stars = useMemo(() => {
