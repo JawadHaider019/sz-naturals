@@ -21,7 +21,7 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
     cost: product.cost || 0,
     price: product.price || 0,
     discountprice: product.discountprice || 0,
-    quantity: product.quantity || 0,
+    quantity: Math.max(0, product.quantity || 0), // Ensure not negative
     bestseller: product.bestseller || false,
     status: product.status || 'draft',
     // New fields - converted to comma-separated strings
@@ -43,6 +43,21 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
   const [subcategories, setSubcategories] = useState([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
 
+  // Helper function to find subcategory by name or ID
+  const findSubcategoryId = (subcategoryIdOrName, subcategoriesList) => {
+    if (!subcategoryIdOrName || !subcategoriesList) return '';
+    
+    // Try to find by ID first
+    const byId = subcategoriesList.find(sub => sub._id === subcategoryIdOrName);
+    if (byId) return byId._id;
+    
+    // Try to find by name
+    const byName = subcategoriesList.find(sub => sub.name === subcategoryIdOrName);
+    if (byName) return byName._id;
+    
+    return '';
+  };
+
   // Fetch categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
@@ -50,23 +65,45 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
         setCategoriesLoading(true)
         const response = await axios.get(backendUrl + '/api/categories')
         
-        console.log('Categories API Response:', response.data) // Debug log
+        console.log('Categories API Response:', response.data)
         
         if (response.data && Array.isArray(response.data)) {
           setCategories(response.data)
           
           // If product has a category, load its subcategories
           if (product.category) {
-            console.log('Product category:', product.category) // Debug log
+            console.log('Product category:', product.category)
             
             // Try to find category by _id first, then by name if needed
             const selectedCategory = response.data.find(cat => 
-              cat._id === product.category || cat.name === product.category
+              cat._id === product.category || 
+              cat.name === product.category ||
+              cat._id === formData.category || 
+              cat.name === formData.category
             )
             
             if (selectedCategory && selectedCategory.subcategories) {
-              console.log('Found subcategories:', selectedCategory.subcategories) // Debug log
+              console.log('Found subcategories:', selectedCategory.subcategories)
               setSubcategories(selectedCategory.subcategories)
+              
+              // Also set the category in formData if it's not set
+              if (!formData.category && selectedCategory._id) {
+                setFormData(prev => ({ 
+                  ...prev, 
+                  category: selectedCategory._id 
+                }))
+              }
+              
+              // Try to preserve the subcategory if it exists
+              if (product.subcategory) {
+                const subcategoryId = findSubcategoryId(product.subcategory, selectedCategory.subcategories);
+                if (subcategoryId) {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    subcategory: subcategoryId 
+                  }));
+                }
+              }
             }
           }
         } else {
@@ -82,7 +119,7 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
     }
     
     fetchCategories()
-  }, [product.category])
+  }, [product.category, product.subcategory, formData.category])
 
   // Update subcategories when category changes
   useEffect(() => {
@@ -143,10 +180,38 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
+    // Special handling for category change
+    if (name === 'category') {
+      const selectedCategory = categories.find(cat => cat._id === value)
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        // Only clear subcategory if the new category doesn't have the current subcategory
+        subcategory: selectedCategory && formData.subcategory 
+          ? (selectedCategory.subcategories?.find(
+              sub => sub._id === formData.subcategory || sub.name === formData.subcategory
+            )?._id || '')
+          : ''
+      }))
+    } else if (name === 'quantity') {
+      // Handle quantity change with validation
+      let newValue = parseInt(value) || 0;
+      // Prevent negative values
+      if (newValue < 0) {
+        newValue = 0;
+        toast.info("Quantity cannot be negative");
+      }
+      setFormData(prev => ({
+        ...prev,
+        [name]: newValue
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }))
+    }
   }
 
   // Helper function to convert comma-separated string to array
@@ -595,7 +660,20 @@ const EditMode = ({
               type="number"
               name="quantity"
               value={formData.quantity}
-              onChange={onChange}
+              onChange={(e) => {
+                let value = parseInt(e.target.value) || 0;
+                // Prevent negative values
+                if (value < 0) {
+                  value = 0;
+                  toast.info("Quantity cannot be negative");
+                }
+                onChange({
+                  target: {
+                    name: 'quantity',
+                    value: value
+                  }
+                });
+              }}
               min="0"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
             />

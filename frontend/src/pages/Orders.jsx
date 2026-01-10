@@ -634,111 +634,131 @@ const Orders = () => {
     let mounted = true;
     let controller = new AbortController();
 
-    const loadData = async () => {
+  const loadData = async () => {
+  try {
+    if (mounted) setLoading(true);
+    
+    if (token) {
+      // Logged-in user: Load from backend
       try {
-        if (mounted) setLoading(true);
+        // FIX: Changed from POST to GET and corrected endpoint
+        const response = await axios.get(
+          backendUrl + '/api/order/user',  // Changed from /api/order/userorders
+          { 
+            headers: { token },
+            timeout: 10000,
+            signal: controller.signal
+          }
+        );
+
+        if (mounted && response.data.success) {
+          const sortedOrders = (response.data.orders || [])
+            .filter(order => order.status !== "Cancelled")
+            .sort((a, b) => {
+              // Use the helper function for consistent date comparison
+              return getOrderTimestamp(b) - getOrderTimestamp(a);
+            });
+
+          setOrders(sortedOrders);
+        }
+      } catch (error) {
+        console.error("Error loading user orders:", error);
         
-        if (token) {
-          // Logged-in user: Load from backend
-          try {
-            const response = await axios.post(
-              backendUrl + '/api/order/userorders',
-              {},
-              { 
-                headers: { token },
-                timeout: 10000,
-                signal: controller.signal
-              }
+        // Add detailed error logging
+        if (error.response) {
+          console.error("Response status:", error.response.status);
+          console.error("Response data:", error.response.data);
+          if (error.response.status === 401) {
+            toast.error("Session expired. Please login again.");
+          } else if (error.response.status === 404) {
+            toast.error("Could not load orders. Please try again later.");
+          }
+        } else if (error.request) {
+          console.error("No response received:", error.request);
+          toast.error("Network error. Please check your connection.");
+        }
+        
+        if (mounted) {
+          setOrders([]); // Clear orders on error
+        }
+      }
+    } else {
+      // Guest user: Try to load from backend first using localStorage info
+      const guestOrderInfo = localStorage.getItem('guestOrderInfo');
+      let guestOrders = [];
+      
+      if (guestOrderInfo) {
+        try {
+          const { email, orderId } = JSON.parse(guestOrderInfo);
+          
+          // Try to get the order
+          if (orderId && email) {
+            const trackResponse = await axios.post(
+              backendUrl + '/api/order/guest/track',
+              { orderId, email },
+              { timeout: 10000, signal: controller.signal }
             );
 
-            if (mounted && response.data.success) {
-              const sortedOrders = (response.data.orders || [])
-                .filter(order => order.status !== "Cancelled")
-                .sort((a, b) => {
-                  // Use the helper function for consistent date comparison
-                  return getOrderTimestamp(b) - getOrderTimestamp(a);
-                });
-
-              setOrders(sortedOrders);
-            }
-          } catch (error) {
-            console.error("Error loading user orders:", error);
-            if (mounted) toast.error("Failed to load orders");
-          }
-        } else {
-          // Guest user: Try to load from backend first using localStorage info
-          const guestOrderInfo = localStorage.getItem('guestOrderInfo');
-          let guestOrders = [];
-          
-          if (guestOrderInfo) {
-            try {
-              const { email, orderId } = JSON.parse(guestOrderInfo);
-              
-              // Try to get the order
-              if (orderId && email) {
-                const trackResponse = await axios.post(
-                  backendUrl + '/api/order/guest/track',
-                  { orderId, email },
-                  { timeout: 10000, signal: controller.signal }
-                );
-
-                if (mounted && trackResponse.data.success) {
-                  guestOrders = [trackResponse.data.order];
-                }
-              }
-            } catch (error) {
-              console.log("Could not fetch guest orders from backend:", error);
+            if (mounted && trackResponse.data.success) {
+              guestOrders = [trackResponse.data.order];
             }
           }
-          
-          // Also check localStorage for any saved guest orders
-          try {
-            const savedGuestOrders = localStorage.getItem('guestOrders');
-            if (savedGuestOrders) {
-              const parsedOrders = JSON.parse(savedGuestOrders);
-              // Merge with backend orders
-              parsedOrders.forEach(savedOrder => {
-                if (!guestOrders.some(order => order._id === savedOrder._id)) {
-                  guestOrders.push(savedOrder);
-                }
-              });
+        } catch (error) {
+          console.log("Could not fetch guest orders from backend:", error);
+        }
+      }
+      
+      // Also check localStorage for any saved guest orders
+      try {
+        const savedGuestOrders = localStorage.getItem('guestOrders');
+        if (savedGuestOrders) {
+          const parsedOrders = JSON.parse(savedGuestOrders);
+          // Merge with backend orders
+          parsedOrders.forEach(savedOrder => {
+            if (!guestOrders.some(order => order._id === savedOrder._id)) {
+              guestOrders.push(savedOrder);
             }
-          } catch (error) {
-            console.error("Error loading guest orders from localStorage:", error);
-          }
-          
-          // Check for recent guest order
-          try {
-            const recentOrder = localStorage.getItem('recentGuestOrder');
-            if (recentOrder) {
-              const parsedOrder = JSON.parse(recentOrder);
-              if (!guestOrders.some(order => order._id === parsedOrder._id)) {
-                guestOrders.unshift(parsedOrder);
-              }
-            }
-          } catch (error) {
-            console.error("Error loading recent guest order:", error);
-          }
-          
-          // Sort guest orders by date using the helper function
-          const sortedGuestOrders = guestOrders
-            .filter(order => order && order.status !== "Cancelled")
-            .sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));
-
-          if (mounted) {
-            setOrders(sortedGuestOrders);
+          });
+        }
+      } catch (error) {
+        console.error("Error loading guest orders from localStorage:", error);
+      }
+      
+      // Check for recent guest order
+      try {
+        const recentOrder = localStorage.getItem('recentGuestOrder');
+        if (recentOrder) {
+          const parsedOrder = JSON.parse(recentOrder);
+          if (!guestOrders.some(order => order._id === parsedOrder._id)) {
+            guestOrders.unshift(parsedOrder);
           }
         }
       } catch (error) {
-        console.error("Error in loadData:", error);
-      } finally {
-        if (mounted) setLoading(false);
+        console.error("Error loading recent guest order:", error);
       }
-    };
+      
+      // Sort guest orders by date using the helper function
+      const sortedGuestOrders = guestOrders
+        .filter(order => order && order.status !== "Cancelled")
+        .sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));
 
+      if (mounted) {
+        setOrders(sortedGuestOrders);
+      }
+    }
+  } catch (error) {
+    console.error("Error in loadData:", error);
+    if (mounted) {
+      setOrders([]);
+      toast.error("An unexpected error occurred");
+    }
+  } finally {
+    if (mounted) setLoading(false);
+  }
+};
     loadData();
 
-    return () => {
+    return () => {  
       mounted = false;
       controller.abort();
     };

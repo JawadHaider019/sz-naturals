@@ -418,17 +418,7 @@ const Product = () => {
     }
   }, [stock]);
 
-  const handleQuantityChange = useCallback((e) => {
-    let value = Number(e.target.value);
-    
-    if (isNaN(value) || value < 1) {
-      value = 1;
-    }
-    
-    value = Math.min(value, stock);
-    
-    setQuantity(value);
-  }, [stock]);
+
 
   const incrementQuantity = useCallback(() => {
     if (quantity < stock) {
@@ -436,11 +426,18 @@ const Product = () => {
     }
   }, [quantity, stock]);
 
-  const decrementQuantity = useCallback(() => {
-    if (quantity > 1) {
-      setQuantity(prev => prev - 1);
+ const decrementQuantity = useCallback(() => {
+  if (quantity > 1) {
+    setQuantity(prev => prev - 1);
+  } else {
+    // Prevent quantity from going below 1
+    toast.info("Minimum quantity is 1");
+    // Optional: Reset to 1 if somehow it's already below
+    if (quantity < 1) {
+      setQuantity(1);
     }
-  }, [quantity]);
+  }
+}, [quantity]);
 
   const handleImageUpload = useCallback((e) => {
     const files = Array.from(e.target.files);

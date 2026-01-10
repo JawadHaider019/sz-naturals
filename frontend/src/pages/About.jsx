@@ -329,7 +329,7 @@ const HeroSection = useMemo(() => (
     }, []);
 
     return (
-      <section className="py-24 md:py-32 bg-white">
+    (  teamMembers>0 &&<section className="py-24 md:py-32 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
           
@@ -466,7 +466,7 @@ const HeroSection = useMemo(() => (
             )}
           </div>
         </div>
-      </section>
+      </section>)
     );
   };
 
