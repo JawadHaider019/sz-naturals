@@ -26,7 +26,8 @@ import {
   FaHourglassEnd,
   FaFlask,
   FaInfoCircle,
-  FaListUl
+  FaListUl,
+  FaVideo  // Added FaVideo import
 } from 'react-icons/fa'
 
 const List = ({ token }) => {
@@ -480,7 +481,7 @@ const List = ({ token }) => {
             onStatusChange={updateProductStatus}
             onStockUpdate={updateProductStock}
             token={token}
-            categories={categories} // Pass categories to ProductListView
+            categories={categories}
           />
         )}
 
@@ -504,7 +505,7 @@ const List = ({ token }) => {
               setSelectedProduct(product);
               setViewMode('edit');
             }}
-            categories={categories} // Pass categories to preview modal
+            categories={categories}
           />
         )}
       </div>
@@ -512,7 +513,7 @@ const List = ({ token }) => {
   )
 }
 
-// Product List View Component - UPDATED with proper category name mapping
+// Product List View Component
 const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, onStockUpdate, token, categories }) => {
   
   // Function to get category name by ID
@@ -775,7 +776,6 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Category</th>
-
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Price</th>
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Stock</th>
                 <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Sales</th>
@@ -821,7 +821,6 @@ const ProductListView = ({ products, onView, onEdit, onDelete, onStatusChange, o
                         </div>
                       </div>
                     </td>
-               
                     <td className="py-3 px-4">
                       <div className="flex flex-col">
                         <span className="font-semibold text-green-600 text-sm">{currency}{item.discountprice || item.price}</span>
@@ -1465,7 +1464,7 @@ const EmptyState = ({ type }) => (
   </div>
 )
 
-// Product Details Preview Modal Component - UPDATED with category names
+// Product Details Preview Modal Component - UPDATED WITH VIDEO SECTION
 const ProductDetailsPreview = ({ product, onClose, onEdit, categories }) => {
   if (!product) return null;
 
@@ -1540,6 +1539,46 @@ const ProductDetailsPreview = ({ product, onClose, onEdit, categories }) => {
               ))}
             </div>
           </div>
+
+          {/* ===== VIDEO SECTION ADDED HERE ===== */}
+          {product.video && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 flex items-center">
+                <FaVideo className="w-5 h-5 mr-2 text-purple-600" />
+                Product Video
+              </h3>
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <video 
+                  src={product.video}
+                  controls
+                  className="w-full rounded-lg"
+                  poster={product.image?.[0]}
+                  style={{ maxHeight: '400px' }}
+                  onError={(e) => {
+                    console.error('Video failed to load:', e);
+                    e.target.style.display = 'none';
+                    const parent = e.target.parentNode;
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-red-500 text-center p-4 bg-red-50 rounded-lg mt-2';
+                    errorDiv.innerHTML = `
+                      <p class="font-medium">⚠️ Failed to load video</p>
+                      <a href="${product.video}" target="_blank" class="text-blue-600 underline text-sm mt-2 inline-block">
+                        Open video directly
+                      </a>
+                    `;
+                    parent.appendChild(errorDiv);
+                  }}
+                >
+                  <source src={product.video} type="video/mp4" />
+                  <source src={product.video} type="video/webm" />
+                  Your browser does not support the video tag.
+                </video>
+                <p className="text-sm text-gray-500 mt-2 text-center">
+                  Click play to watch product video
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Basic Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1699,4 +1738,4 @@ const ProductDetailsPreview = ({ product, onClose, onEdit, categories }) => {
   );
 };
 
-export default List
+export default List;

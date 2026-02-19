@@ -8,6 +8,12 @@ const productSchema = new mongoose.Schema({
     cost: { type: Number, required: true }, 
     quantity: { type: Number, required: true },
     image: { type: Array, required: true },
+    // Add video field
+    video: { 
+        type: String, 
+        required: false,
+        default: null 
+    },
     category: { 
         type: String, 
         required: true,
@@ -43,8 +49,14 @@ const productSchema = new mongoose.Schema({
     totalSales: { type: Number, default: 0 },
     idealStock: { type: Number, default: 20 },
     views: { type: Number, default: 0 },
-    // New field to track if notification was sent
-    notificationSent: { type: Boolean, default: false }
+    // Track if notification was sent
+    notificationSent: { type: Boolean, default: false },
+    // Optional: Add video metadata if needed
+    videoMetadata: {
+        duration: { type: Number }, // Duration in seconds
+        thumbnail: { type: String }, // Video thumbnail URL
+        format: { type: String } // Video format (mp4, etc.)
+    }
 });
 
 // Add index for better category queries
@@ -65,6 +77,31 @@ productSchema.pre('save', function(next) {
   
   next();
 });
+
+// Virtual for checking if product has video
+productSchema.virtual('hasVideo').get(function() {
+  return !!this.video;
+});
+
+// Method to get video embed URL (if needed for different platforms)
+productSchema.methods.getVideoEmbedUrl = function() {
+  if (!this.video) return null;
+  
+  // Check if it's a YouTube URL
+  if (this.video.includes('youtube.com') || this.video.includes('youtu.be')) {
+    const videoId = this.video.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return videoId ? `https://www.youtube.com/embed/${videoId[1]}` : null;
+  }
+  
+  // Check if it's a Vimeo URL
+  if (this.video.includes('vimeo.com')) {
+    const videoId = this.video.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
+    return videoId ? `https://player.vimeo.com/video/${videoId[1]}` : null;
+  }
+  
+  // For Cloudinary or direct video URLs
+  return this.video;
+};
 
 const productModel = mongoose.models.product || mongoose.model("product", productSchema);
 export default productModel;

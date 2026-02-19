@@ -9,6 +9,29 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Helper function to upload file to Cloudinary
+const uploadToCloudinary = async (file, resourceType, folder = 'products') => {
+  try {
+    const result = await cloudinary.uploader.upload(file.path, { 
+      resource_type: resourceType,
+      folder: folder,
+      // Optional: Add video-specific transformations
+      ...(resourceType === 'video' && {
+        chunk_size: 6000000, // For large video files
+        eager: [
+          { width: 300, height: 300, crop: "pad", audio_codec: "none" },
+          { width: 100, height: 100, crop: "pad", audio_codec: "none" }
+        ],
+        eager_async: true
+      })
+    });
+    return result.secure_url;
+  } catch (error) {
+    console.error(`Error uploading ${resourceType}:`, error);
+    throw error;
+  }
+};
+
 // ------------------- ADD PRODUCT -------------------
 const addProduct = async (req, res) => {
   try {
@@ -29,16 +52,22 @@ const addProduct = async (req, res) => {
       benefits
     } = req.body;
 
+    // Handle image uploads
     const imagesFiles = ['image1', 'image2', 'image3', 'image4']
       .map(key => req.files[key]?.[0])
       .filter(Boolean);
 
     const imagesUrl = await Promise.all(
       imagesFiles.map(async file => {
-        const result = await cloudinary.uploader.upload(file.path, { resource_type: 'image' });
-        return result.secure_url;
+        return await uploadToCloudinary(file, 'image');
       })
     );
+
+    // Handle video upload (if provided)
+    let videoUrl = null;
+    if (req.files['video']?.[0]) {
+      videoUrl = await uploadToCloudinary(req.files['video'][0], 'video', 'product-videos');
+    }
 
     // Parse array fields if they're strings (from form data)
     let parsedIngredients = [];
@@ -77,6 +106,7 @@ const addProduct = async (req, res) => {
       quantity: Number(quantity),
       bestseller: bestseller === 'true' || bestseller === true,
       image: imagesUrl,
+      video: videoUrl, // Add video URL to product data
       status: status || 'draft',
       date: Date.now(),
       // New optional fields
@@ -88,14 +118,13 @@ const addProduct = async (req, res) => {
     const product = new productModel(productData);
     await product.save();
 
-    // ✅ ADDED: Send newsletter notification if product is published
+    // Send newsletter notification if product is published
     if (status === 'published') {
       try {
         await notifyNewProduct(product);
         console.log('📢 New product notification sent to subscribers');
       } catch (notificationError) {
         console.error('❌ Failed to send product notification:', notificationError);
-        // Don't fail the whole request if notification fails
       }
     }
 
@@ -116,16 +145,12 @@ const addProduct = async (req, res) => {
 // ------------------- LIST PRODUCTS -------------------
 const listProducts = async (req, res) => {
   try {
-    const { status = 'all' } = req.query; // Default to 'all'
+    const { status = 'all' } = req.query;
     
-    // Build query
     let query = {};
-    
-    // If status is specified and not 'all', apply status filter
     if (status && status !== 'all') {
       query.status = status;
     }
-    // If status is 'all' or not provided, no status filter (get all products)
     
     const products = await productModel.find(query);
     
@@ -134,7 +159,8 @@ const listProducts = async (req, res) => {
     console.log('📊 Status breakdown:', {
       published: products.filter(p => p.status === 'published').length,
       draft: products.filter(p => p.status === 'draft').length,
-      archived: products.filter(p => p.status === 'archived').length
+      archived: products.filter(p => p.status === 'archived').length,
+      withVideo: products.filter(p => p.video).length
     });
     
     res.json({ 
@@ -154,7 +180,42 @@ const listProducts = async (req, res) => {
 // ------------------- REMOVE PRODUCT -------------------
 const removeProduct = async (req, res) => {
   try {
+    const product = await productModel.findById(req.body.id);
+    
+    if (product) {
+      // Delete images from Cloudinary
+      if (product.image && product.image.length > 0) {
+        for (const imgUrl of product.image) {
+          try {
+            const match = imgUrl.match(/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+            const publicId = match ? match[1] : null;
+            if (publicId) {
+              await cloudinary.uploader.destroy(publicId);
+              console.log(`Deleted image from Cloudinary: ${publicId}`);
+            }
+          } catch (err) {
+            console.error("Cloudinary image deletion error:", err);
+          }
+        }
+      }
+      
+      // Delete video from Cloudinary if exists
+      if (product.video) {
+        try {
+          const match = product.video.match(/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+          const publicId = match ? match[1] : null;
+          if (publicId) {
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+            console.log(`Deleted video from Cloudinary: ${publicId}`);
+          }
+        } catch (err) {
+          console.error("Cloudinary video deletion error:", err);
+        }
+      }
+    }
+    
     await productModel.findByIdAndDelete(req.body.id);
+    
     res.json({ 
       success: true, 
       message: "Product removed successfully" 
@@ -201,7 +262,7 @@ const updateProduct = async (req, res) => {
     const fields = [
       'id', 'name', 'description', 'cost', 'price', 'discountprice', 
       'quantity', 'category', 'subcategory', 'bestseller', 'status', 
-      'removedImages',
+      'removedImages', 'removeVideo',
       // New fields
       'ingredients', 'howToUse', 'benefits'
     ];
@@ -223,6 +284,7 @@ const updateProduct = async (req, res) => {
       bestseller,
       status,
       removedImages,
+      removeVideo,
       // New optional fields
       ingredients,
       howToUse,
@@ -342,12 +404,7 @@ const updateProduct = async (req, res) => {
 
       if (newImages.length > 0) {
         const newImageUrls = await Promise.all(
-          newImages.map(file => 
-            cloudinary.uploader.upload(file.path, { 
-              resource_type: "image", 
-              folder: "products" 
-            }).then(res => res.secure_url)
-          )
+          newImages.map(file => uploadToCloudinary(file, 'image', 'products'))
         );
         finalImages = [...finalImages, ...newImageUrls];
         console.log(`Added ${newImageUrls.length} new images`);
@@ -356,6 +413,48 @@ const updateProduct = async (req, res) => {
 
     updateData.image = finalImages;
 
+    // ------------------- VIDEO HANDLING -------------------
+    let finalVideo = existingProduct.video;
+
+    // Handle video removal
+    if (removeVideo === 'true' || removeVideo === true) {
+      if (existingProduct.video) {
+        try {
+          const match = existingProduct.video.match(/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+          const publicId = match ? match[1] : null;
+          if (publicId) {
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+            console.log(`Deleted video from Cloudinary: ${publicId}`);
+          }
+        } catch (err) {
+          console.error("Cloudinary video deletion error:", err);
+        }
+      }
+      finalVideo = null;
+    }
+
+    // Handle new video upload
+    if (req.files['video']?.[0]) {
+      // Delete old video if exists
+      if (existingProduct.video && removeVideo !== 'true') {
+        try {
+          const match = existingProduct.video.match(/upload\/(?:v\d+\/)?(.+)\.\w+$/);
+          const publicId = match ? match[1] : null;
+          if (publicId) {
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+            console.log(`Deleted old video from Cloudinary: ${publicId}`);
+          }
+        } catch (err) {
+          console.error("Cloudinary video deletion error:", err);
+        }
+      }
+      
+      finalVideo = await uploadToCloudinary(req.files['video'][0], 'video', 'product-videos');
+      console.log('New video uploaded:', finalVideo);
+    }
+
+    updateData.video = finalVideo;
+
     // Perform the update
     const updatedProduct = await productModel.findByIdAndUpdate(
       id, 
@@ -363,14 +462,13 @@ const updateProduct = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // ✅ ADDED: Send newsletter notification if status changed to published
+    // Send newsletter notification if status changed to published
     if (status === 'published' && existingProduct.status !== 'published') {
       try {
         await notifyNewProduct(updatedProduct);
         console.log('📢 New product notification sent to subscribers');
       } catch (notificationError) {
         console.error('❌ Failed to send product notification:', notificationError);
-        // Don't fail the whole request if notification fails
       }
     }
 
@@ -423,14 +521,13 @@ const updateProductStatus = async (req, res) => {
       { new: true }
     );
 
-    // ✅ ADDED: Send newsletter notification when status changes to published
+    // Send newsletter notification when status changes to published
     if (status === 'published' && existingProduct.status !== 'published') {
       try {
         await notifyNewProduct(updatedProduct);
         console.log('📢 New product notification sent to subscribers');
       } catch (notificationError) {
         console.error('❌ Failed to send product notification:', notificationError);
-        // Don't fail the whole request if notification fails
       }
     }
 

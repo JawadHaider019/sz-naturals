@@ -561,16 +561,7 @@ const PlaceOrder = () => {
           };
           localStorage.setItem('guestOrderInfo', JSON.stringify(guestOrderInfo));
           
-          toast.success(
-            <div>
-              <p>✅ Order placed successfully as guest!</p>
-              <p className="text-sm mt-1">
-                Save this order ID: <strong>{response.data.orderId}</strong>
-              </p>
-              <p className="text-sm">Check your email for tracking details.</p>
-            </div>
-          );
-          
+         
           navigate('/orders', { 
             state: { 
               orderId: response.data.orderId,
@@ -622,7 +613,7 @@ const PlaceOrder = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Your Cart is Empty</h2>
           <p className="text-gray-600 mb-8 text-lg">Add some herbal products to your cart first</p>
           <button 
-            onClick={() => navigate('/collection')}
+            onClick={() => navigate('/shop')}
             className="group bg-black text-white px-8 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all duration-300 w-full flex items-center justify-center gap-3"
           >
             <span>Browse Products</span>

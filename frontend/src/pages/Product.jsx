@@ -24,7 +24,9 @@ import {
   FaTruck,
   FaBoxOpen,
   FaSeedling,
-  FaSpinner
+  FaSpinner,
+  FaVideo,
+  FaPlayCircle
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
@@ -59,6 +61,9 @@ const Product = () => {
   const [loading, setLoading] = useState(true);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [loadingProductDetails, setLoadingProductDetails] = useState(false);
+  
+  // Video state
+  const [showVideo, setShowVideo] = useState(false);
   
   // Login Modal State - Add this
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -318,6 +323,7 @@ const Product = () => {
             ingredients: details.ingredients || [],
             benefits: details.benefits || [],
             howToUse: details.howToUse || '',
+            video: details.video || null, // Add video field
             // Preserve other fields
             ...(details.quantity !== undefined && { quantity: details.quantity }),
             ...(details.status !== undefined && { status: details.status }),
@@ -1018,6 +1024,17 @@ const Product = () => {
                     }}
                   />
                 </div>
+                
+                {/* Video Button - Show if product has video */}
+                {productData.video && (
+                  <button
+                    onClick={() => setShowVideo(true)}
+                    className="absolute bottom-4 right-4 z-10 bg-black bg-opacity-70 hover:bg-opacity-90 text-white px-4 py-2 rounded-full flex items-center gap-2 transition-all duration-300 shadow-lg"
+                  >
+                    <FaPlayCircle className="w-5 h-5" />
+                    <span className="text-sm font-medium">Watch Video</span>
+                  </button>
+                )}
               </div>
 
               {/* Thumbnails */}
@@ -1144,6 +1161,33 @@ const Product = () => {
             </div>
           </div>
         </div>
+
+        {/* Video Modal */}
+        {showVideo && productData.video && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
+            <div className="relative max-w-4xl w-full">
+              <div className="bg-black rounded-2xl overflow-hidden">
+                <video 
+                  src={productData.video}
+                  controls
+                  autoPlay
+                  className="w-full"
+                  style={{ maxHeight: '80vh' }}
+                >
+                  <source src={productData.video} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <button
+                onClick={() => setShowVideo(false)}
+                className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2"
+                aria-label="Close video"
+              >
+                <FaTimes className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Product Details Tabs */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8 md:mb-12">

@@ -94,9 +94,11 @@ const Collection = () => {
         
       } catch (error) {
         setError(error.message);
-        // Fallback: extract categories from products
+        // Fallback: extract categories from published products only
         const categoryMap = {};
-        products.forEach(product => {
+        const publishedProducts = products.filter(p => p.status === 'published');
+        
+        publishedProducts.forEach(product => {
           if (product && product.category) {
             const categoryName = product.category;
             const subcategoryName = product.subcategory;
@@ -133,7 +135,7 @@ const Collection = () => {
       setError('Backend URL configuration missing');
       setLoading(false);
     }
-  }, [backendURL]);
+  }, [backendURL, products]);
 
   // Helper functions
   const getCategoryName = useCallback((categoryId) => {
@@ -198,9 +200,10 @@ const Collection = () => {
     }
   }, [selectedCategories, backendCategories]);
 
-  // Apply filters and sorting
+  // Apply filters and sorting - ONLY SHOW PUBLISHED PRODUCTS
   useEffect(() => {
-    let productsCopy = [...products];
+    // Start with only published products
+    let productsCopy = products.filter(item => item.status === 'published');
 
     // Search filter
     if (showSearch && search) {
@@ -272,20 +275,24 @@ const Collection = () => {
     getSubcategoryId
   ]);
 
-  // Get product counts for categories
+  // Get product counts for categories - ONLY COUNT PUBLISHED PRODUCTS
   const getCategoryProductCount = useCallback((categoryName) => {
     const categoryId = getCategoryId(categoryName);
-    return products.filter(product => {
+    const publishedProducts = products.filter(p => p.status === 'published');
+    
+    return publishedProducts.filter(product => {
       const productCategoryId = product.category;
       const productCategoryName = getCategoryName(productCategoryId);
       return productCategoryId === categoryId || productCategoryName === categoryName;
     }).length;
   }, [products, getCategoryId, getCategoryName]);
 
-  // Get product counts for subcategories
+  // Get product counts for subcategories - ONLY COUNT PUBLISHED PRODUCTS
   const getSubcategoryProductCount = useCallback((subcategoryName) => {
     const subcategoryId = getSubcategoryId(subcategoryName);
-    return products.filter(product => {
+    const publishedProducts = products.filter(p => p.status === 'published');
+    
+    return publishedProducts.filter(product => {
       const parentCategorySelected = selectedCategories.length === 0 || 
         selectedCategories.some(cat => {
           const categoryId = getCategoryId(cat);
@@ -316,6 +323,11 @@ const Collection = () => {
     { value: 'low-high', label: 'Price: Low to High', icon: <FaSortAmountDown className="w-3 h-3" /> },
     { value: 'high-low', label: 'Price: High to Low', icon: <FaSortAmountDown className="w-3 h-3 rotate-180" /> }
   ];
+
+  // Calculate published products count
+  const publishedProductsCount = useMemo(() => 
+    products.filter(p => p.status === 'published').length
+  , [products]);
 
   // Show error state
   if (error) {
@@ -440,6 +452,9 @@ const Collection = () => {
                 {backendCategories.length > 0 ? (
                   backendCategories.map(cat => {
                     const productCount = getCategoryProductCount(cat.name);
+                    // Only show categories that have published products
+                    if (productCount === 0) return null;
+                    
                     const isSelected = selectedCategories.includes(cat.name);
                     return (
                       <button
@@ -482,25 +497,24 @@ const Collection = () => {
                 <div className="space-y-2">
                   {availableSubcategories.map(sub => {
                     const productCount = getSubcategoryProductCount(sub);
+                    // Only show subcategories that have published products
+                    if (productCount === 0) return null;
+                    
                     const isSelected = selectedSubCategories.includes(sub);
-                    const isDisabled = productCount === 0;
                     
                     return (
                       <button
                         key={sub}
-                        onClick={() => !isDisabled && toggleSubCategory(sub)}
-                        disabled={isDisabled}
+                        onClick={() => toggleSubCategory(sub)}
                         className={`flex items-center justify-between w-full p-2 rounded-lg transition-all duration-200 ${
-                          isDisabled 
-                            ? 'opacity-50 cursor-not-allowed' 
-                            : isSelected 
-                              ? 'bg-black text-white' 
-                              : 'hover:bg-gray-50'
+                          isSelected 
+                            ? 'bg-black text-white' 
+                            : 'hover:bg-gray-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <div className={`w-4 h-4 flex items-center justify-center rounded border ${
-                            isSelected ? 'border-white' : isDisabled ? 'border-gray-200' : 'border-gray-300'
+                            isSelected ? 'border-white' : 'border-gray-300'
                           }`}>
                             {isSelected && <span className="text-xs">✓</span>}
                           </div>
@@ -524,7 +538,7 @@ const Collection = () => {
             <div className="pt-4 border-t border-gray-100">
               <div className="text-sm text-gray-600">
                 Showing <span className="font-semibold text-black">{filterProducts.length}</span> of{" "}
-                <span className="font-semibold text-black">{products.length}</span> products
+                <span className="font-semibold text-black">{publishedProductsCount}</span> products
               </div>
             </div>
           </div>
@@ -562,7 +576,7 @@ const Collection = () => {
 
           {/* Products Grid */}
           {filterProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filterProducts.map((item) => (
                 <ProductItem
                   key={item._id}

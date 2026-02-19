@@ -8,10 +8,46 @@ import {
   FaInfoCircle, 
   FaFlask, 
   FaCheckCircle,
-  FaListUl
+  FaListUl,
+  FaVideo,
+  FaPlayCircle,
+  FaTrash,
+  FaExclamationTriangle
 } from 'react-icons/fa'
 
 const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
+  // Debug logs at component start
+  console.log('🚀 ========== PRODUCT DETAILS MOUNTED ==========');
+  console.log('📦 Product received:', {
+    exists: !!product,
+    id: product?._id,
+    name: product?.name,
+    hasVideo: !!product?.video,
+    videoUrl: product?.video,
+    mode: mode
+  });
+  console.log('===============================================');
+
+  // Safety check for missing product
+  if (!product) {
+    console.error('❌ No product provided to ProductDetails');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+          <FaExclamationTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error</h2>
+          <p className="text-gray-600 mb-6">No product data available</p>
+          <button 
+            onClick={onBack} 
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [formData, setFormData] = useState({
     ...product,
     name: product.name || '',
@@ -24,6 +60,8 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
     quantity: Math.max(0, product.quantity || 0), // Ensure not negative
     bestseller: product.bestseller || false,
     status: product.status || 'draft',
+    // Video field
+    video: product.video || null,
     // New fields - converted to comma-separated strings
     ingredients: product.ingredients && Array.isArray(product.ingredients) 
       ? product.ingredients.join(', ') 
@@ -37,6 +75,11 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
   const [loading, setLoading] = useState(false)
   const [newImages, setNewImages] = useState([])
   const [removedImages, setRemovedImages] = useState([])
+  
+  // Video state
+  const [newVideo, setNewVideo] = useState(null)
+  const [removeCurrentVideo, setRemoveCurrentVideo] = useState(false)
+  const [videoPreview, setVideoPreview] = useState(null)
   
   // Fetch categories and subcategories from backend
   const [categories, setCategories] = useState([])
@@ -147,6 +190,17 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
     }
   }, [formData.category, categories])
 
+  // Create video preview URL when new video is selected
+  useEffect(() => {
+    if (newVideo) {
+      const url = URL.createObjectURL(newVideo)
+      setVideoPreview(url)
+      return () => URL.revokeObjectURL(url)
+    } else {
+      setVideoPreview(null)
+    }
+  }, [newVideo])
+
   // Helper functions to get names for display
   const getCategoryName = (categoryId) => {
     if (!categoryId) return 'Select Category'
@@ -214,6 +268,40 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
     }
   }
 
+  // Video handlers
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Video file too large. Maximum size is 10MB");
+        return;
+      }
+      // Check file type
+      const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/3gpp'];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Please upload MP4, WebM, MOV, or 3GP video formats");
+        return;
+      }
+      setNewVideo(file);
+      setRemoveCurrentVideo(false); // If uploading new video, don't remove current
+    }
+  };
+
+  const handleRemoveVideo = () => {
+    if (formData.video && !newVideo) {
+      // If there's an existing video and no new video, mark for removal
+      setRemoveCurrentVideo(true);
+    } else {
+      // If there's a new video, just clear it
+      setNewVideo(null);
+    }
+  };
+
+  const handleCancelVideoRemoval = () => {
+    setRemoveCurrentVideo(false);
+  };
+
   // Helper function to convert comma-separated string to array
   const convertStringToArray = (str) => {
     if (!str || str.trim() === '') return [];
@@ -278,6 +366,15 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
         formDataToSend.append("benefits", "[]"); // Empty array
       }
       
+      // Video handling
+      if (removeCurrentVideo) {
+        formDataToSend.append('removeVideo', 'true');
+      }
+      
+      if (newVideo) {
+        formDataToSend.append('video', newVideo);
+      }
+      
       // Send removedImages as a proper JSON string
       formDataToSend.append('removedImages', JSON.stringify(removedImages))
       
@@ -303,6 +400,8 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
         // Clear the image states after successful save
         setNewImages([])
         setRemovedImages([])
+        setNewVideo(null)
+        setRemoveCurrentVideo(false)
         
         onSave()
       } else {
@@ -396,6 +495,7 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
         {/* Product Details */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-6">
+            {console.log('🔄 Rendering section - mode:', mode, 'product:', product?._id)}
             {mode === 'view' ? (
               <ViewMode 
                 product={product} 
@@ -416,6 +516,13 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
                 onImageUpload={handleImageUpload}
                 onRemoveExistingImage={removeExistingImage}
                 onRemoveNewImage={removeNewImage}
+                // Video props
+                newVideo={newVideo}
+                removeCurrentVideo={removeCurrentVideo}
+                videoPreview={videoPreview}
+                onVideoChange={handleVideoChange}
+                onRemoveVideo={handleRemoveVideo}
+                onCancelVideoRemoval={handleCancelVideoRemoval}
                 // Pricing summary
                 pricingSummary={calculatePricingSummary()}
                 // Helper functions
@@ -434,6 +541,22 @@ const ProductDetails = ({ product, mode, token, onBack, onSave }) => {
 }
 
 const ViewMode = ({ product, getCategoryName, getSubcategoryName }) => {
+  // Debug logs
+  console.log('========== VIEW MODE DEBUG ==========');
+  console.log('1. Full product object:', JSON.stringify(product, null, 2));
+  console.log('2. Video field:', product?.video);
+  console.log('3. Video type:', typeof product?.video);
+  console.log('4. Has video?', !!product?.video);
+  console.log('5. Video exists condition:', product?.video ? 'true' : 'false');
+  console.log('=====================================');
+
+  // Test if video URL is accessible
+  if (product?.video) {
+    fetch(product.video, { method: 'HEAD' })
+      .then(res => console.log('Video URL status:', res.status))
+      .catch(err => console.error('Video URL error:', err));
+  }
+  
   // Convert arrays to comma-separated strings for display
   const ingredientsString = product.ingredients && Array.isArray(product.ingredients) 
     ? product.ingredients.join(', ') 
@@ -444,82 +567,182 @@ const ViewMode = ({ product, getCategoryName, getSubcategoryName }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Images */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Images</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {product.image && product.image.map((img, index) => (
-            <div key={index} className="relative">
-              <img
-                src={img}
-                alt={`${product.name} ${index + 1}`}
-                className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
-              />
-            </div>
-          ))}
+      {/* Left Column - Images & Video */}
+      <div className="space-y-6">
+        {/* Product Images Section */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Images</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {product.image && product.image.length > 0 ? (
+              product.image.map((img, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={img}
+                    alt={`${product.name} ${index + 1}`}
+                    className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 p-8 bg-gray-50 rounded-lg border border-gray-200 text-center text-gray-500">
+                No images available
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Debug Info - Shows video URL */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="font-bold text-yellow-800 mb-2">Debug Info</h4>
+          <p className="text-sm text-yellow-700 break-all">
+            <span className="font-medium">Video URL:</span> {product.video || 'No video URL'}
+          </p>
+          <p className="text-sm text-yellow-700 mt-1">
+            <span className="font-medium">Has Video:</span> {product.video ? '✅ Yes' : '❌ No'}
+          </p>
+        </div>
+
+        {/* Product Video Section - Simple Test */}
+        {product.video ? (
+          <div className="border-4 border-blue-500 rounded-xl p-4 bg-blue-50">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
+              <FaVideo className="w-5 h-5 mr-2 text-blue-600" />
+              Product Video Test
+            </h3>
+            
+            {/* Direct video player */}
+            <div className="mb-4">
+              <video 
+                src={product.video}
+                controls
+                className="w-full rounded-lg shadow-lg"
+                style={{ minHeight: '200px', backgroundColor: '#000' }}
+                onError={(e) => {
+                  console.error('Video failed to load:', e);
+                  e.target.style.display = 'none';
+                }}
+              >
+                <source src={product.video} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            {/* Direct link */}
+            <div className="mt-2 text-center">
+              <a 
+                href={product.video} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 underline text-sm"
+              >
+                Open video directly in new tab
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
+              <FaVideo className="w-5 h-5 mr-2 text-gray-400" />
+              Product Video
+            </h3>
+            <div className="text-center text-gray-500 py-8">
+              <FaVideo className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No video available for this product</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Details */}
+      {/* Right Column - Product Details */}
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold mb-4 text-gray-900">Product Information</h3>
-          <div className="space-y-3 bg-gray-50 rounded-lg p-4">
-            <DetailRow label="Name" value={product.name} />
-            <DetailRow label="Description" value={product.description} />
-            <DetailRow label="Category" value={getCategoryName(product.category)} />
-            <DetailRow label="Subcategory" value={getSubcategoryName(product.subcategory) || 'N/A'} />
-            <DetailRow label="Cost Price" value={`${currency}${product.cost}`} />
-            <DetailRow label="Original Price" value={`${currency}${product.price}`} />
-            <DetailRow label="Discount Price" value={`${currency}${product.discountprice}`} />
-            <DetailRow label="Quantity" value={product.quantity} />
-            <DetailRow label="Bestseller" value={product.bestseller ? 'Yes' : 'No'} />
-            <DetailRow label="Status" value={product.status || 'draft'} />
-            <DetailRow label="Date Added" value={new Date(product.date).toLocaleDateString()} />
+        {/* Basic Information */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Product Information</h3>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              <DetailRow label="Name" value={product.name} highlight />
+              <DetailRow label="Description" value={product.description} />
+              <DetailRow label="Category" value={getCategoryName(product.category)} />
+              <DetailRow label="Subcategory" value={getSubcategoryName(product.subcategory) || 'N/A'} />
+              <DetailRow label="Cost Price" value={`${currency}${Number(product.cost).toFixed(2)}`} />
+              <DetailRow label="Original Price" value={`${currency}${Number(product.price).toFixed(2)}`} />
+              <DetailRow label="Discount Price" value={product.discountprice > 0 ? `${currency}${Number(product.discountprice).toFixed(2)}` : 'No discount'} />
+              <DetailRow label="Quantity in Stock" value={product.quantity} />
+              <DetailRow label="Bestseller" value={product.bestseller ? '✓ Yes' : '✗ No'} />
+              <DetailRow label="Status" value={
+                <span className={`capitalize px-2 py-1 rounded-full text-xs font-medium ${
+                  product.status === 'published' ? 'bg-green-100 text-green-800' :
+                  product.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                  product.status === 'archived' ? 'bg-red-100 text-red-800' :
+                  'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {product.status}
+                </span>
+              } />
+              <DetailRow label="Date Added" value={new Date(product.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })} />
+            </div>
           </div>
         </div>
         
         {/* Ingredients Section */}
         {ingredientsString && ingredientsString.trim() !== "" && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
-              <FaFlask className="w-5 h-5 mr-2 text-blue-600" />
-              Ingredients
-              <span className="ml-2 text-sm font-normal text-gray-500">
-                ({product.ingredients.length} ingredients)
-              </span>
-            </h3>
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <p className="text-gray-700">{ingredientsString}</p>
+          <div className="bg-white rounded-xl border border-blue-200 overflow-hidden shadow-sm">
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <FaFlask className="w-5 h-5 mr-2 text-blue-600" />
+                Ingredients
+                <span className="ml-2 text-sm font-normal text-gray-600">
+                  ({product.ingredients?.length || 0} ingredients)
+                </span>
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <p className="text-gray-700 leading-relaxed">{ingredientsString}</p>
+              </div>
             </div>
           </div>
         )}
 
         {/* How to Use Section */}
         {product.howToUse && product.howToUse.trim() !== "" && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
-              <FaInfoCircle className="w-5 h-5 mr-2 text-purple-600" />
-              How to Use
-            </h3>
-            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-              <div className="text-gray-700 whitespace-pre-line">{product.howToUse}</div>
+          <div className="bg-white rounded-xl border border-purple-200 overflow-hidden shadow-sm">
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <FaInfoCircle className="w-5 h-5 mr-2 text-purple-600" />
+                How to Use
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                <div className="text-gray-700 whitespace-pre-line leading-relaxed">{product.howToUse}</div>
+              </div>
             </div>
           </div>
         )}
 
         {/* Benefits Section */}
         {benefitsString && benefitsString.trim() !== "" && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
-              <FaCheckCircle className="w-5 h-5 mr-2 text-green-600" />
-              Benefits
-              <span className="ml-2 text-sm font-normal text-gray-500">
-                ({product.benefits.length} benefits)
-              </span>
-            </h3>
-            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-              <p className="text-gray-700">{benefitsString}</p>
+          <div className="bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm">
+            <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-green-200">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <FaCheckCircle className="w-5 h-5 mr-2 text-green-600" />
+                Benefits
+                <span className="ml-2 text-sm font-normal text-gray-600">
+                  ({product.benefits?.length || 0} benefits)
+                </span>
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                <p className="text-gray-700 leading-relaxed">{benefitsString}</p>
+              </div>
             </div>
           </div>
         )}
@@ -540,6 +763,13 @@ const EditMode = ({
   onImageUpload,
   onRemoveExistingImage,
   onRemoveNewImage,
+  // Video props
+  newVideo,
+  removeCurrentVideo,
+  videoPreview,
+  onVideoChange,
+  onRemoveVideo,
+  onCancelVideoRemoval,
   pricingSummary,
   getCategoryName,
   getSubcategoryName,
@@ -786,6 +1016,106 @@ const EditMode = ({
             Enter benefits separated by commas. Example: "Hydrates skin, Reduces wrinkles, Brightens complexion"
           </p>
         </div>
+      </div>
+
+      {/* Video Upload Section */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
+          <FaVideo className="w-5 h-5 mr-2 text-purple-600" />
+          Product Video (Optional)
+        </h3>
+        
+        {/* Current Video */}
+        {formData.video && !removeCurrentVideo && !newVideo && (
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-md font-medium text-gray-700">Current Video</h4>
+              <button
+                type="button"
+                onClick={onRemoveVideo}
+                className="text-red-600 hover:text-red-800 transition-colors text-sm flex items-center"
+              >
+                <FaTrash className="mr-1" />
+                Remove Video
+              </button>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <video 
+                src={formData.video} 
+                controls 
+                className="w-full max-h-64 rounded-lg"
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+        )}
+
+        {/* Video Marked for Removal */}
+        {removeCurrentVideo && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FaExclamationTriangle className="text-yellow-600 mr-2" />
+                <p className="text-sm text-yellow-700">
+                  Current video will be removed when you save changes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onCancelVideoRemoval}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* New Video Preview */}
+        {newVideo && (
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-md font-medium text-gray-700">New Video to Upload</h4>
+              <button
+                type="button"
+                onClick={onRemoveVideo}
+                className="text-red-600 hover:text-red-800 transition-colors text-sm flex items-center"
+              >
+                <FaTrash className="mr-1" />
+                Remove
+              </button>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <video 
+                src={videoPreview} 
+                controls 
+                className="w-full max-h-64 rounded-lg"
+              >
+                Your browser does not support the video tag.
+              </video>
+              <p className="text-sm text-gray-500 mt-2">
+                {newVideo.name} ({(newVideo.size / (1024 * 1024)).toFixed(2)} MB)
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Upload New Video */}
+        {!newVideo && (!formData.video || removeCurrentVideo) && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Upload Video</label>
+            <input
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime,video/3gpp"
+              onChange={onVideoChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+            />
+            <p className="text-sm text-gray-500 mt-2">
+              Upload a short product demo or promotional video (Max 5MB, MP4/WebM/MOV/3GP formats)
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Image Management */}

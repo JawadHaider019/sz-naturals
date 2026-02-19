@@ -25,7 +25,10 @@ import {
   faFlask,
   faInfoCircle,
   faCheckCircle,
-  faListUl
+  faListUl,
+  faVideo, // Added for video
+  faPlayCircle, // Added for video
+  faTrash // Added for delete
 } from '@fortawesome/free-solid-svg-icons';
 
 const Add = () => { 
@@ -39,6 +42,7 @@ const Add = () => {
 
   // --- Product Info State ---
   const [images, setImages] = useState([null, null, null, null]);
+  const [video, setVideo] = useState(null); // Added video state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -199,6 +203,28 @@ const Add = () => {
     if (file) setImages((prev) => prev.map((img, i) => (i === index ? file : img)));
   }, []);
 
+  const handleVideoChange = useCallback((e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Video file too large. Maximum size is 10MB");
+        return;
+      }
+      // Check file type
+      const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/3gpp'];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Please upload MP4, WebM, MOV, or 3GP video formats");
+        return;
+      }
+      setVideo(file);
+    }
+  }, []);
+
+  const handleRemoveVideo = useCallback(() => {
+    setVideo(null);
+  }, []);
+
   const handleDealImageChange = useCallback((e, index) => {
     const file = e.target.files[0];
     if (file) setDealImages((prev) => prev.map((img, i) => (i === index ? file : img)));
@@ -240,6 +266,7 @@ const Add = () => {
     setName("");
     setDescription("");
     setImages([null, null, null, null]);
+    setVideo(null); // Reset video
     setQuantity("");
     setCost("");
     setPrice("");
@@ -322,6 +349,11 @@ const Add = () => {
             formData.append(`image${index + 1}`, img);
           }
         });
+
+        // Append video if exists
+        if (video) {
+          formData.append("video", video);
+        }
 
         console.log("=== PRODUCT FORM DATA ===");
         for (let [key, value] of formData.entries()) {
@@ -406,7 +438,7 @@ const Add = () => {
       setLoading(false);
     }
   }, [
-    activeTab, name, description, category, subCategory, quantity, bestseller, cost, price, discountprice, images,
+    activeTab, name, description, category, subCategory, quantity, bestseller, cost, price, discountprice, images, video,
     ingredients, howToUse, benefits,
     dealName, dealDescription, dealType, dealDiscountType, dealDiscountValue, dealTotal, finalPrice, dealStartDate,
     dealEndDate, dealProducts, dealImages, token, resetForm, backendUrl, logout
@@ -416,6 +448,14 @@ const Add = () => {
   const productImagesSection = useMemo(() => (
     <ProductImagesSection images={images} handleImageChange={handleImageChange} />
   ), [images, handleImageChange]);
+
+  const productVideoSection = useMemo(() => (
+    <ProductVideoSection 
+      video={video} 
+      handleVideoChange={handleVideoChange} 
+      handleRemoveVideo={handleRemoveVideo}
+    />
+  ), [video, handleVideoChange, handleRemoveVideo]);
 
   const dealImagesSection = useMemo(() => (
     <DealImagesSection dealImages={dealImages} handleDealImageChange={handleDealImageChange} />
@@ -543,8 +583,15 @@ const Add = () => {
             </div>
           </div>
 
-          {/* Images */}
-          {activeTab === 'products' ? productImagesSection : dealImagesSection}
+          {/* Images & Video */}
+          {activeTab === 'products' ? (
+            <>
+              {productImagesSection}
+              {productVideoSection}
+            </>
+          ) : (
+            dealImagesSection
+          )}
 
           {/* Form Sections */}
           {activeTab === 'products' ? productSection : dealSection}
@@ -587,7 +634,75 @@ const Add = () => {
   );
 };
 
-// Memoized sub-components (updated to use dynamic data)
+// New ProductVideoSection component
+const ProductVideoSection = memo(({ video, handleVideoChange, handleRemoveVideo }) => {
+  return (
+    <div className="mb-6 sm:mb-8">
+      <label className="block text-sm font-medium text-gray-700 mb-3 sm:mb-4 flex items-center">
+        <FontAwesomeIcon icon={faVideo} className="mr-2 text-gray-600" />
+        Product Video (max 5MB)
+      </label>
+      
+      {!video ? (
+        <div className="relative">
+          <input
+            type="file"
+            id="videoUpload"
+            accept="video/mp4,video/webm,video/quicktime,video/3gpp"
+            onChange={handleVideoChange}
+            className="hidden"
+          />
+          <label
+            htmlFor="videoUpload"
+            className="flex flex-col items-center justify-center w-full h-32 sm:h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-black transition-colors"
+          >
+            <FontAwesomeIcon icon={faCloudUploadAlt} className="text-2xl sm:text-3xl text-gray-400 mb-2" />
+            <span className="text-sm text-gray-600">Click to upload product video</span>
+            <span className="text-xs text-gray-500 mt-1">MP4, WebM, MOV, 3GP (Max 10MB)</span>
+          </label>
+        </div>
+      ) : (
+        <div className="relative bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
+                <FontAwesomeIcon icon={faPlayCircle} className="text-white text-2xl" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{video.name}</p>
+                <p className="text-xs text-gray-500">
+                  {(video.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleRemoveVideo}
+              className="text-red-600 hover:text-red-800 transition-colors p-2"
+              title="Remove video"
+            >
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
+          </div>
+          <div className="mt-3">
+            <video 
+              src={URL.createObjectURL(video)} 
+              controls 
+              className="w-full max-h-48 rounded-lg"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+      )}
+      
+      <p className="text-xs text-gray-500 mt-2 text-center">
+        Upload a short product demo or promotional video (30-60 seconds recommended)
+      </p>
+    </div>
+  );
+});
+
 const ProductImagesSection = memo(({ images, handleImageChange }) => {
   return (
     <div className="mb-6 sm:mb-8">
