@@ -7,7 +7,7 @@ const Footer = () => {
         <p>
           © {new Date().getFullYear()}{" "}
           <span>
-            YourCompany {" "}
+            SZ Naturals {" "}
           </span>
           Admin Panel. All rights reserved.
         </p>
